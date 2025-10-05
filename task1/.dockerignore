@@ -1,0 +1,21 @@
+# Ignore node_modules directory
+node_modules
+
+# Ignore log files
+*.log
+
+# Ignore environment variable files
+.env
+
+# Ignore build output
+dist
+
+# Ignore coverage reports
+coverage
+
+# Ignore Dockerfile and docker-compose.yml for local development
+Dockerfile
+docker-compose.yml
+
+# Ignore test files
+/tests/*
