@@ -8,6 +8,11 @@ COPY tsconfig.json ./
 # Use npm install so a package-lock.json is not required during image build
 RUN npm install
 COPY . .
+
+RUN mkdir -p /usr/src/app/data && \
+    chmod 755 /usr/src/app/data
+
+
 RUN npm run build
 
 FROM node:20-alpine AS runner
