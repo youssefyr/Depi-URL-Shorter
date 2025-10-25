@@ -41,6 +41,10 @@ services:
         condition: service_healthy
     networks:
       - app-network
+<<<<<<< HEAD
+=======
+      - monitoring
+>>>>>>> 00bdbc0 (Advanced Visualization with Grafana)
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -62,11 +66,58 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+<<<<<<< HEAD
+=======
+  
+  # --- PROMETHEUS SERVICE ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    restart: unless-stopped
+  
+   # --- GRAFANA SERVICE ---
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+    restart: unless-stopped
+>>>>>>> 00bdbc0 (Advanced Visualization with Grafana)
 
 volumes:
   postgres_data:
     driver: local
+<<<<<<< HEAD
 
 networks:
   app-network:
+=======
+  prometheus_data:
+  grafana_data:
+networks:
+  app-network:
+    driver: bridge
+  monitoring:
+>>>>>>> 00bdbc0 (Advanced Visualization with Grafana)
     driver: bridge
