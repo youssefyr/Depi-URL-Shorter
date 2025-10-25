@@ -1,0 +1,49 @@
+{
+  "title": "URL Shortener Dashboard",
+  "schemaVersion": 36,
+  "version": 2,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "URL Creations per Second",
+      "targets": [
+        { "expr": "rate(urls_shortened_total[1m])" }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Successful Redirects per Second",
+      "targets": [
+        { "expr": "rate(successful_redirects_total[1m])" }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "404 Errors per Second",
+      "targets": [
+        { "expr": "rate(failed_lookups_total[1m])" }
+      ],
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 6 }
+    },
+    {
+      "type": "stat",
+      "title": "Total Shortened URLs",
+      "targets": [
+        { "expr": "sum(urls_shortened_total)" }
+      ],
+      "gridPos": { "x": 12, "y": 6, "w": 6, "h": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "95th Percentile Request Latency (ms)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(request_latency_ms_bucket[5m])) by (le))"
+        }
+      ],
+      "gridPos": { "x": 18, "y": 6, "w": 6, "h": 6 }
+    }
+  ]
+}

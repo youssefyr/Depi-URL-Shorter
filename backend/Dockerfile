@@ -1,10 +1,6 @@
 FROM node:20-alpine AS builder
-<<<<<<< HEAD
-=======
 # Install curl for debugging and health checks
 RUN apk add --no-cache curl
-
->>>>>>> 00bdbc0 (Advanced Visualization with Grafana)
 
 # build stage
 WORKDIR /usr/src/app
@@ -22,10 +18,8 @@ RUN mkdir -p /usr/src/app/data && \
 RUN npm run build
 
 FROM node:20-alpine AS runner
-<<<<<<< HEAD
-=======
+
 RUN apk add --no-cache curl
->>>>>>> 00bdbc0 (Advanced Visualization with Grafana)
 WORKDIR /usr/src/app
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/package*.json ./
