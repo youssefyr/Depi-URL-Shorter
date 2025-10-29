@@ -1,0 +1,4 @@
+apiVersion: v1
+kind: url-shortener
+metadata:
+  name: url-shortener
