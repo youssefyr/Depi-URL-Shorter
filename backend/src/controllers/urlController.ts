@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createUrl, findByShortCode, incrementClicks } from '../models/url';
+import { createUrl, findByShortCode, incrementClicks, logClick, getClickStats } from '../models/url';
 import { generateShortCode } from '../services/shortener';
 import { isValidUrl } from '../utils/validators';
 import { metricsService } from '../services/metrics';
@@ -49,6 +49,7 @@ export const redirectUrl = async (req: Request, res: Response): Promise<void> =>
     }
 
     await incrementClicks(shortCode);
+    await logClick(urlRecord.id, req.headers['user-agent'] || '', req.headers.referer || '');
     metricsService.incrementSuccessfulRedirects();
     metricsService.recordLatency(Date.now() - startTime);
 
@@ -57,5 +58,16 @@ export const redirectUrl = async (req: Request, res: Response): Promise<void> =>
     console.error('Error redirecting:', error);
     metricsService.recordLatency(Date.now() - startTime);
     res.status(500).json({ error: 'Failed to redirect' });
+  }
+};
+
+export const getUrlStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { shortCode } = req.params;
+    const stats = await getClickStats(shortCode);
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error('Error getting URL stats:', error);
+    res.status(500).json({ error: 'Failed to get URL stats' });
   }
 };

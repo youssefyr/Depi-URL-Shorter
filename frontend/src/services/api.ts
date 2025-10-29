@@ -29,5 +29,14 @@ export const api = {
     } catch (error: any) {
       return { success: false, error: error.response?.data?.error || 'Failed to fetch URLs' };
     }
+  },
+
+  getUrlStats: async (shortCode: string): Promise<ApiResponse<any[]>> => {
+    try {
+      const response = await axios.get(`${API_URL}/api/stats/${shortCode}`);
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      return { success: false, error: error.response?.data?.error || 'Failed to fetch stats' };
+    }
   }
 };

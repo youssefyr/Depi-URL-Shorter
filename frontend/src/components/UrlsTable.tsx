@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { UrlRecord } from '../types';
+import QRCodeModal from './QRCodeModal';
 
 const UrlsTable: React.FC = () => {
   const [urls, setUrls] = useState<UrlRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedUrl, setSelectedUrl] = useState('');
 
   const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
@@ -37,6 +41,11 @@ const UrlsTable: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const handleShowQR = (shortCode: string) => {
+    setSelectedUrl(`${baseUrl}/${shortCode}`);
+    setShowQRModal(true);
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
@@ -60,83 +69,103 @@ const UrlsTable: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">All Shortened URLs</h2>
-        <span className="text-sm text-gray-600">{urls.length} total URLs</span>
+    <>
+      <div className="relative bg-primary dark:bg-dark-primary rounded-2xl shadow-neumorphic dark:shadow-neumorphic-dark p-6 overflow-hidden">
+        <div className="absolute inset-0 bg-glow dark:bg-glow-blue opacity-10"></div>
+        <div className="relative z-10">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-700 dark:text-gray-300">All Shortened URLs</h2>
+            <span className="text-lg text-gray-600 dark:text-gray-400 shadow-neumorphic-inset dark:shadow-neumorphic-dark-inset px-4 py-2 rounded-xl">{urls.length} total</span>
+          </div>
+          
+          {urls.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-lg">
+              No URLs shortened yet. Create your first one!
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-primary dark:bg-dark-primary">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Short Code
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Original URL
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Clicks
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Created At
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-primary dark:bg-dark-primary divide-y divide-gray-200 dark:divide-gray-700">
+                  {urls.map((url) => (
+                    <tr key={url.id} className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <code className="text-md font-mono text-accent">
+                          {url.short_code}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-md text-gray-800 dark:text-gray-300 max-w-md truncate" title={url.original_url}>
+                          {url.original_url}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-3 py-1 inline-flex text-md leading-5 font-semibold rounded-full shadow-neumorphic-inset dark:shadow-neumorphic-dark-inset text-gray-700 dark:text-gray-300">
+                          {url.clicks}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-md text-gray-600 dark:text-gray-400">
+                        {formatDate(url.created_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-md font-medium space-x-4">
+                        <button
+                          onClick={() => copyToClipboard(`${baseUrl}/${url.short_code}`)}
+                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
+                          title="Copy short URL"
+                        >
+                          Copy
+                        </button>
+                        <a
+                          href={`${baseUrl}/${url.short_code}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
+                        >
+                          Visit
+                        </a>
+                        <button
+                          onClick={() => handleShowQR(url.short_code)}
+                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
+                          title="Generate QR Code"
+                        >
+                          QR
+                        </button>
+                        <Link
+                          to={`/stats/${url.short_code}`}
+                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
+                          title="View Stats"
+                        >
+                          Stats
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
-      
-      {urls.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          No URLs shortened yet. Create your first one above!
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Short Code
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Original URL
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Clicks
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created At
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {urls.map((url) => (
-                <tr key={url.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <code className="text-sm font-mono text-blue-600">
-                      {url.short_code}
-                    </code>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 max-w-md truncate" title={url.original_url}>
-                      {url.original_url}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                      {url.clicks}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(url.created_at)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => copyToClipboard(`${baseUrl}/${url.short_code}`)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                      title="Copy short URL"
-                    >
-                      Copy
-                    </button>
-                    <a
-                      href={`${baseUrl}/${url.short_code}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-600 hover:text-green-900"
-                    >
-                      Visit
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+      {showQRModal && <QRCodeModal url={selectedUrl} onClose={() => setShowQRModal(false)} />}
+    </>
   );
 };
 

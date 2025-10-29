@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { shortenUrl, redirectUrl } from '../controllers/urlController';
+import { shortenUrl, redirectUrl, getUrlStats } from '../controllers/urlController';
 import { metricsService } from '../services/metrics';
 import { getUrlCount, getTotalClicks, getAllUrls } from '../models/url';
 
@@ -8,6 +8,8 @@ const router = Router();
 router.post('/shorten', shortenUrl);
 
 router.get('/:shortCode', redirectUrl);
+
+router.get('/stats/:shortCode', getUrlStats);
 
 router.get('/urls', async (req, res) => {
   try {

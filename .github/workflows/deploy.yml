@@ -33,11 +33,6 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/url-shortener-frontend:latest
 
       - name: Set up Kubeconfig
-        # This step is a placeholder. You will need to configure this for your specific Kubernetes provider.
-        # For example, for GKE, you would use actions/google-github-actions/get-gke-credentials
-        # For AKS, you would use azure/aks-set-context
-        # For EKS, you would use aws-actions/configure-aws-credentials and aws-actions/amazon-eks-cluster
-        # You can also use a generic kubeconfig file stored as a secret.
         run: |
           echo "apiVersion: v1
           clusters:

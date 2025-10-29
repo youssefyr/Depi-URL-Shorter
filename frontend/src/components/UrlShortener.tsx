@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
+import QRCodeModal from './QRCodeModal';
 
 const UrlShortener: React.FC = () => {
   const [url, setUrl] = useState('');
   const [shortCode, setShortCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showQRModal, setShowQRModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,57 +30,69 @@ const UrlShortener: React.FC = () => {
   const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">URL Shortener</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
-            Enter your long URL
-          </label>
-          <input
-            type="url"
-            id="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/very/long/url"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
+    <>
+      <div className="relative max-w-2xl mx-auto p-8 bg-primary dark:bg-dark-primary rounded-3xl shadow-neumorphic dark:shadow-neumorphic-dark overflow-hidden">
+        <div className="absolute inset-0 bg-glow dark:bg-glow-blue opacity-20"></div>
+        <div className="relative z-10">
+          <h2 className="text-4xl font-bold text-gray-700 dark:text-gray-300 mb-8 text-center">URL Shortener</h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="url" className="block text-lg font-medium text-gray-600 dark:text-gray-400 mb-3">
+                Enter your long URL
+              </label>
+              <input
+                type="url"
+                id="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://example.com/very/long/url"
+                required
+                className="w-full px-5 py-4 bg-primary dark:bg-dark-primary rounded-2xl shadow-neumorphic-inset dark:shadow-neumorphic-dark-inset focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-300"
+              />
+            </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-        >
-          {loading ? 'Shortening...' : 'Shorten URL'}
-        </button>
-      </form>
-
-      {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-700">{error}</p>
-        </div>
-      )}
-
-      {shortCode && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-sm text-gray-600 mb-2">Your shortened URL:</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 bg-white px-3 py-2 rounded border text-blue-600 font-mono">
-              {baseUrl}/{shortCode}
-            </code>
             <button
-              onClick={() => navigator.clipboard.writeText(`${baseUrl}/${shortCode}`)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed py-4 px-6 rounded-2xl shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 font-semibold text-lg focus:outline-none"
             >
-              Copy
+              {loading ? 'Shortening...' : 'Shorten URL'}
             </button>
-          </div>
+          </form>
+
+          {error && (
+            <div className="mt-6 p-4 bg-red-100 dark:bg-red-900 rounded-2xl shadow-neumorphic-inset dark:shadow-neumorphic-dark-inset">
+              <p className="text-red-700 dark:text-red-300 text-center font-medium">{error}</p>
+            </div>
+          )}
+
+          {shortCode && (
+            <div className="mt-8 p-6 bg-primary dark:bg-dark-primary rounded-2xl shadow-neumorphic dark:shadow-neumorphic-dark">
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-3 text-center">Your shortened URL:</p>
+              <div className="flex items-center gap-4">
+                <code className="flex-1 bg-primary dark:bg-dark-primary px-4 py-3 rounded-lg shadow-neumorphic-inset dark:shadow-neumorphic-dark-inset text-accent font-mono text-center text-lg">
+                  {baseUrl}/{shortCode}
+                </code>
+                <button
+                  onClick={() => navigator.clipboard.writeText(`${baseUrl}/${shortCode}`)}
+                  className="px-5 py-3 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 font-semibold focus:outline-none"
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={() => setShowQRModal(true)}
+                  className="px-5 py-3 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 font-semibold focus:outline-none"
+                >
+                  QR
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+      {showQRModal && <QRCodeModal url={`${baseUrl}/${shortCode}`} onClose={() => setShowQRModal(false)} />}
+    </>
   );
 };
 

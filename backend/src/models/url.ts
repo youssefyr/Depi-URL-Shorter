@@ -45,3 +45,22 @@ export const getTotalClicks = async (): Promise<number> => {
   const result = await query('SELECT COALESCE(SUM(clicks), 0) as total FROM urls');
   return parseInt(result.rows[0].total);
 };
+
+export const logClick = async (urlId: number, userAgent: string, referrer: string): Promise<void> => {
+  await query(
+    'INSERT INTO clicks (url_id, user_agent, referrer) VALUES ($1, $2, $3)',
+    [urlId, userAgent, referrer]
+  );
+};
+
+export const getClickStats = async (shortCode: string): Promise<any[]> => {
+  const result = await query(
+    `SELECT c.clicked_at, c.user_agent, c.referrer
+     FROM clicks c
+     JOIN urls u ON c.url_id = u.id
+     WHERE u.short_code = $1
+     ORDER BY c.clicked_at DESC`,
+    [shortCode]
+  );
+  return result.rows;
+};
