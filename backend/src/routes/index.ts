@@ -5,11 +5,11 @@ import { getUrlCount, getTotalClicks, getAllUrls } from '../models/url';
 
 const router = Router();
 
-router.post('/api/shorten', shortenUrl);
+router.post('/shorten', shortenUrl);
 
 router.get('/:shortCode', redirectUrl);
 
-router.get('/api/urls', async (req, res) => {
+router.get('/urls', async (req, res) => {
   try {
     const urls = await getAllUrls();
     res.json(urls);
@@ -20,7 +20,7 @@ router.get('/api/urls', async (req, res) => {
 });
 
 // Prometheus (text format)
-router.get('/api/metric', async (req, res) => {
+router.get('/metric', async (req, res) => {
   try {
     res.set('Content-Type', 'text/plain');
     res.send(await metricsService.getMetrics());
@@ -31,7 +31,7 @@ router.get('/api/metric', async (req, res) => {
 });
 
 // Prometheus (JSON format)
-router.get('/api/metrics', async (req, res) => {
+router.get('/metrics', async (req, res) => {
   try {
     const [urlCount, totalClicks] = await Promise.all([
       getUrlCount(),

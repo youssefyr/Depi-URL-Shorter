@@ -5,7 +5,10 @@ import Dashboard from './components/Dashboard';
 
 function App() {
   return (
-    <Router>
+    <Router future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <nav className="bg-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
