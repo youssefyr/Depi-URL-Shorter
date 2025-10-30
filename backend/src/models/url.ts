@@ -1,6 +1,6 @@
 import { query } from '../db';
 
-export interface Url {
+export interface UrlRecord {
   id: number;
   original_url: string;
   short_code: string;
@@ -8,7 +8,7 @@ export interface Url {
   clicks: number;
 }
 
-export const createUrl = async (originalUrl: string, shortCode: string): Promise<Url> => {
+export const createUrl = async (originalUrl: string, shortCode: string): Promise<UrlRecord> => {
   const result = await query(
     'INSERT INTO urls (original_url, short_code) VALUES ($1, $2) RETURNING *',
     [originalUrl, shortCode]
@@ -16,7 +16,7 @@ export const createUrl = async (originalUrl: string, shortCode: string): Promise
   return result.rows[0];
 };
 
-export const findByShortCode = async (shortCode: string): Promise<Url | null> => {
+export const findByShortCode = async (shortCode: string): Promise<UrlRecord | null> => {
   const result = await query(
     'SELECT * FROM urls WHERE short_code = $1',
     [shortCode]
@@ -31,9 +31,16 @@ export const incrementClicks = async (shortCode: string): Promise<void> => {
   );
 };
 
-export const getAllUrls = async (): Promise<Url[]> => {
-  const result = await query('SELECT * FROM urls ORDER BY created_at DESC');
-  return result.rows;
+export const logClick = async (urlId: number, userAgent: string, referer: string): Promise<void> => {
+  try {
+    await query(
+      'INSERT INTO clicks (url_id, user_agent, referer) VALUES ($1, $2, $3)',
+      [urlId, userAgent || null, referer || null]
+    );
+  } catch (error) {
+    console.error('Error logging click:', error);
+    // Don't throw - we don't want to fail the redirect if logging fails
+  }
 };
 
 export const getUrlCount = async (): Promise<number> => {
@@ -42,23 +49,23 @@ export const getUrlCount = async (): Promise<number> => {
 };
 
 export const getTotalClicks = async (): Promise<number> => {
-  const result = await query('SELECT COALESCE(SUM(clicks), 0) as total FROM urls');
-  return parseInt(result.rows[0].total);
+  const result = await query('SELECT SUM(clicks) as total FROM urls');
+  return parseInt(result.rows[0].total) || 0;
 };
 
-export const logClick = async (urlId: number, userAgent: string, referrer: string): Promise<void> => {
-  await query(
-    'INSERT INTO clicks (url_id, user_agent, referrer) VALUES ($1, $2, $3)',
-    [urlId, userAgent, referrer]
+export const getAllUrls = async (): Promise<UrlRecord[]> => {
+  const result = await query(
+    'SELECT * FROM urls ORDER BY created_at DESC'
   );
+  return result.rows;
 };
 
 export const getClickStats = async (shortCode: string): Promise<any[]> => {
   const result = await query(
-    `SELECT c.clicked_at, c.user_agent, c.referrer
-     FROM clicks c
-     JOIN urls u ON c.url_id = u.id
-     WHERE u.short_code = $1
+    `SELECT c.*, u.original_url 
+     FROM clicks c 
+     JOIN urls u ON c.url_id = u.id 
+     WHERE u.short_code = $1 
      ORDER BY c.clicked_at DESC`,
     [shortCode]
   );

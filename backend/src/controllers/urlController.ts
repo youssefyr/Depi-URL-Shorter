@@ -24,7 +24,7 @@ export const shortenUrl = async (req: Request, res: Response): Promise<void> => 
     res.status(201).json({
       originalUrl: urlRecord.original_url,
       shortCode: urlRecord.short_code,
-      shortUrl: `${req.protocol}://${req.get('host')}/${urlRecord.short_code}`,
+      shortUrl: `${req.protocol}://${req.get('host')}/go/${urlRecord.short_code}`,
       createdAt: urlRecord.created_at
     });
   } catch (error) {
@@ -39,20 +39,28 @@ export const redirectUrl = async (req: Request, res: Response): Promise<void> =>
   
   try {
     const { shortCode } = req.params;
+    console.log('Redirecting short code:', shortCode);
+    
     const urlRecord = await findByShortCode(shortCode);
 
     if (!urlRecord) {
+      console.log('Short code not found:', shortCode);
       metricsService.incrementFailedLookups();
       metricsService.recordLatency(Date.now() - startTime);
       res.status(404).json({ error: 'Short URL not found' });
       return;
     }
 
+    console.log('Found URL record:', urlRecord);
+
     await incrementClicks(shortCode);
-    await logClick(urlRecord.id, req.headers['user-agent'] || '', req.headers.referer || '');
+    
+    logClick(urlRecord.id, req.headers['user-agent'] || '', req.headers.referer || '');
+    
     metricsService.incrementSuccessfulRedirects();
     metricsService.recordLatency(Date.now() - startTime);
 
+    console.log('Redirecting to:', urlRecord.original_url);
     res.redirect(urlRecord.original_url);
   } catch (error) {
     console.error('Error redirecting:', error);

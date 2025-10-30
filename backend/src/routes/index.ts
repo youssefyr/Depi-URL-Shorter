@@ -5,13 +5,15 @@ import { getUrlCount, getTotalClicks, getAllUrls } from '../models/url';
 
 const router = Router();
 
-router.post('/shorten', shortenUrl);
+// Health check - FIRST
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
-router.get('/:shortCode', redirectUrl);
+// API routes
+router.post('/api/shorten', shortenUrl);
 
-router.get('/stats/:shortCode', getUrlStats);
-
-router.get('/urls', async (req, res) => {
+router.get('/api/urls', async (req, res) => {
   try {
     const urls = await getAllUrls();
     res.json(urls);
@@ -21,8 +23,10 @@ router.get('/urls', async (req, res) => {
   }
 });
 
-// Prometheus (text format)
-router.get('/metric', async (req, res) => {
+router.get('/api/stats/:shortCode', getUrlStats);
+
+// Prometheus metrics (text format)
+router.get('/api/metric', async (req, res) => {
   try {
     res.set('Content-Type', 'text/plain');
     res.send(await metricsService.getMetrics());
@@ -32,8 +36,8 @@ router.get('/metric', async (req, res) => {
   }
 });
 
-// Prometheus (JSON format)
-router.get('/metrics', async (req, res) => {
+// JSON metrics for frontend
+router.get('/api/metrics', async (req, res) => {
   try {
     const [urlCount, totalClicks] = await Promise.all([
       getUrlCount(),
@@ -56,8 +60,7 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+// Redirect route
+router.get('/go/:shortCode', redirectUrl);
 
 export default router;

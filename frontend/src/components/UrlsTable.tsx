@@ -2,16 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { UrlRecord } from '../types';
-import QRCodeModal from './QRCodeModal';
 
 const UrlsTable: React.FC = () => {
   const [urls, setUrls] = useState<UrlRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [selectedUrl, setSelectedUrl] = useState('');
-
-  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
     const fetchUrls = async () => {
@@ -28,144 +23,109 @@ const UrlsTable: React.FC = () => {
     };
 
     fetchUrls();
-    const interval = setInterval(fetchUrls, 15000); // Refresh every 15 seconds
+    const interval = setInterval(fetchUrls, 15000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  const handleShowQR = (shortCode: string) => {
-    setSelectedUrl(`${baseUrl}/${shortCode}`);
-    setShowQRModal(true);
-  };
+  const baseUrl = window.location.origin;
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">All Shortened URLs</h2>
-        <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="flex justify-center p-8">
+        <span className="loading loading-spinner loading-lg"></span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">All Shortened URLs</h2>
-        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-700">{error}</p>
-        </div>
+      <div className="alert alert-error">
+        <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>{error}</span>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="relative bg-primary dark:bg-dark-primary rounded-2xl shadow-neumorphic dark:shadow-neumorphic-dark p-6 overflow-hidden">
-        <div className="absolute inset-0 bg-glow dark:bg-glow-blue opacity-10"></div>
-        <div className="relative z-10">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-700 dark:text-gray-300">All Shortened URLs</h2>
-            <span className="text-lg text-gray-600 dark:text-gray-400 shadow-neumorphic-inset dark:shadow-neumorphic-dark-inset px-4 py-2 rounded-xl">{urls.length} total</span>
-          </div>
-          
-          {urls.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-lg">
-              No URLs shortened yet. Create your first one!
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-primary dark:bg-dark-primary">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Short Code
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Original URL
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Clicks
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Created At
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-primary dark:bg-dark-primary divide-y divide-gray-200 dark:divide-gray-700">
-                  {urls.map((url) => (
-                    <tr key={url.id} className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <code className="text-md font-mono text-accent">
-                          {url.short_code}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-md text-gray-800 dark:text-gray-300 max-w-md truncate" title={url.original_url}>
-                          {url.original_url}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 inline-flex text-md leading-5 font-semibold rounded-full shadow-neumorphic-inset dark:shadow-neumorphic-dark-inset text-gray-700 dark:text-gray-300">
-                          {url.clicks}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-md text-gray-600 dark:text-gray-400">
-                        {formatDate(url.created_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-md font-medium space-x-4">
+    <div className="card bg-base-100 shadow-xl">
+      <div className="card-body">
+        <h2 className="card-title text-2xl mb-4">All Shortened URLs</h2>
+        
+        <div className="overflow-x-auto">
+          <table className="table table-zebra">
+            <thead>
+              <tr className="bg-base-200">
+                <th className="font-bold">Short Code</th>
+                <th className="font-bold">Original URL</th>
+                <th className="font-bold">Clicks</th>
+                <th className="font-bold">Created</th>
+                <th className="font-bold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {urls.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-base-content/70">
+                    No URLs created yet
+                  </td>
+                </tr>
+              ) : (
+                urls.map((url) => (
+                  <tr key={url.id} className="hover">
+                    <td>
+                      <a
+                        href={`${baseUrl}/go/${url.short_code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link link-primary font-mono font-bold"
+                      >
+                        {url.short_code}
+                      </a>
+                    </td>
+                    <td className="max-w-xs truncate" title={url.original_url}>
+                      <span className="text-base-content">{url.original_url}</span>
+                    </td>
+                    <td>
+                      <div className="badge badge-primary badge-lg font-bold">
+                        {url.clicks || 0}
+                      </div>
+                    </td>
+                    <td className="text-base-content/70">
+                      {new Date(url.created_at).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => copyToClipboard(`${baseUrl}/${url.short_code}`)}
-                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
-                          title="Copy short URL"
+                          onClick={() => navigator.clipboard.writeText(`${baseUrl}/go/${url.short_code}`)}
+                          className="btn btn-ghost btn-xs"
+                          title="Copy URL"
                         >
-                          Copy
-                        </button>
-                        <a
-                          href={`${baseUrl}/${url.short_code}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
-                        >
-                          Visit
-                        </a>
-                        <button
-                          onClick={() => handleShowQR(url.short_code)}
-                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
-                          title="Generate QR Code"
-                        >
-                          QR
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
                         </button>
                         <Link
                           to={`/stats/${url.short_code}`}
-                          className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-neumorphic hover:shadow-neumorphic-inset active:shadow-neumorphic-inset transition-all duration-200 focus:outline-none"
+                          className="btn btn-ghost btn-xs"
                           title="View Stats"
                         >
-                          Stats
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
                         </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
-      {showQRModal && <QRCodeModal url={selectedUrl} onClose={() => setShowQRModal(false)} />}
-    </>
+    </div>
   );
 };
 
