@@ -55,10 +55,7 @@ services:
       dockerfile: Dockerfile
     container_name: url-shortener-frontend
     ports:
-      - "3001:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:3000
-
+      - "3001:80"
     depends_on:
       - backend
     networks:
