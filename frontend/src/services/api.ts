@@ -2,7 +2,7 @@ import axios from 'axios';
 import { UrlData, MetricsData, ApiResponse, UrlRecord } from '../types';
 
 // relative URL
-const API_URL = process.env.REACT_APP_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const api = {
   shortenUrl: async (originalUrl: string): Promise<ApiResponse<UrlData>> => {
