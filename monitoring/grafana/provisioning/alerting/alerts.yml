@@ -1,0 +1,214 @@
+apiVersion: 1
+
+groups:
+  - name: "backend-alerts"
+    folder: "Backend Alerts"
+    interval: 30s
+    rules:
+      # ========================================
+      # 1. High 404 Errors
+      # ========================================
+      - uid: "high-404-errors"
+        title: "High 404 Errors"
+        condition: "A"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "PBFA97CFB590B2093"
+            model:
+              datasource:
+                type: prometheus
+                uid: "PBFA97CFB590B2093"
+              expr: rate(failed_lookups_total[5m])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              type: query
+              conditions:
+                - evaluator:
+                    params: [5]
+                    type: gt
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: "OK"
+        execErrState: "Error"
+        for: 1m
+        annotations:
+          summary: "404 errors are too high"
+          description: "The rate of 404s exceeded the threshold (more than 5 per 5 minutes)."
+        labels:
+          severity: "warning"
+          service: "url-shortener"
+          metric: "failed_lookups_total"
+
+      # ========================================
+      # 2. High Request Latency
+      # ========================================
+      - uid: "high-latency"
+        title: "High Request Latency"
+        condition: "A"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "PBFA97CFB590B2093"
+            model:
+              datasource:
+                type: prometheus
+                uid: "PBFA97CFB590B2093"
+              expr: histogram_quantile(0.95, sum(rate(request_latency_ms_bucket[5m])) by (le))
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              type: query
+              conditions:
+                - evaluator:
+                    params: [500]
+                    type: gt
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: "OK"
+        execErrState: "Error"
+        for: 2m
+        annotations:
+          summary: "Request latency is too high"
+          description: "The 95th percentile latency exceeded 500ms over the last 5 minutes."
+        labels:
+          severity: "critical"
+          service: "url-shortener"
+          metric: "request_latency_ms"
+
+      # ========================================
+      # 3. Low Redirect Success Rate
+      # ========================================
+      - uid: "low-redirect-success"
+        title: "Low Redirect Success Rate"
+        condition: "A"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "PBFA97CFB590B2093"
+            model:
+              datasource:
+                type: prometheus
+                uid: "PBFA97CFB590B2093"
+              expr: |
+                rate(successful_redirects_total[5m]) 
+                / (rate(successful_redirects_total[5m]) + rate(failed_lookups_total[5m]))
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              type: query
+              conditions:
+                - evaluator:
+                    params: [0.9]
+                    type: lt
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: "OK"
+        execErrState: "Error"
+        for: 2m
+        annotations:
+          summary: "Redirect success rate dropped"
+          description: "Redirect success rate is below 90% — possible DB or routing issue."
+        labels:
+          severity: "warning"
+          service: "url-shortener"
+          metric: "successful_redirects_total"
+
+      # ========================================
+      # 4. Low URL Shortening Activity
+      # ========================================
+      - uid: "low-url-activity"
+        title: "Low URL Shortening Activity"
+        condition: "A"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: "PBFA97CFB590B2093"
+            model:
+              datasource:
+                type: prometheus
+                uid: "PBFA97CFB590B2093"
+              expr: rate(urls_shortened_total[10m])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              type: query
+              conditions:
+                - evaluator:
+                    params: [0.1]
+                    type: lt
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: "OK"
+        execErrState: "Error"
+        for: 5m
+        annotations:
+          summary: "Low URL shortening activity detected"
+          description: "Fewer than 0.1 new URLs shortened per second in the last 10 minutes — check if the API is down or unused."
+        labels:
+          severity: "info"
+          service: "url-shortener"
+          metric: "urls_shortened_total"
+
+      # ========================================
+      # 5. High CPU Usage
+      # ========================================
+      - uid: "high-cpu-usage"
+        title: "High CPU Usage"
+        condition: "A"
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "PBFA97CFB590B2093"
+            model:
+              datasource:
+                type: prometheus
+                uid: "PBFA97CFB590B2093"
+              # Works with node_exporter or container metrics
+              expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+              type: query
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+                  type: query
+        noDataState: "OK"
+        execErrState: "Error"
+        for: 2m
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU utilization has been above 80% for the last 2 minutes. Check running processes or scaling."
+        labels:
+          severity: "critical"
+          service: "url-shortener"
+          metric: "cpu_usage"
