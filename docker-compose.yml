@@ -87,11 +87,11 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
 
-    # 👇 Email (SMTP) Configuration
+    #  Email (SMTP) Configuration
       - GF_SMTP_ENABLED=true
       - GF_SMTP_HOST=smtp.gmail.com:587
       - GF_SMTP_USER=hagerelhalaby9@gmail.com
-      - GF_SMTP_PASSWORD=szjtxivvclajbfbp
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
       - GF_SMTP_SKIP_VERIFY=true
       - GF_SMTP_FROM_ADDRESS=hagerelhalaby9@gmail.com
       - GF_SMTP_FROM_NAME=Grafana Alerts
