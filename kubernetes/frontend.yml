@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: YOUR_DOCKER_USERNAME/url-shortener-frontend:latest
+          image: hagerelhalaby/url-shorter-frontend:latest
           ports:
             - containerPort: 3000
           env:
