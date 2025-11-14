@@ -43,14 +43,6 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:frontend-latest
             ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:frontend-${{ github.sha }}
 
-      - name: Build and push monitoring image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./monitoring
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:monitoring-latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:monitoring-${{ github.sha }}
       - name: Clean up
         run: |
           rm -f .env
