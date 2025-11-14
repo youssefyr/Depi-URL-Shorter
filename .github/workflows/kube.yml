@@ -1,0 +1,44 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "apiVersion: v1
+          clusters:
+          - cluster:
+              server: ${{ secrets.KUBE_SERVER }}
+              certificate-authority-data: ${{ secrets.KUBE_CERT_DATA }}
+            name: k8s
+          contexts:
+          - context:
+              cluster: k8s
+              user: user
+            name: k8s
+          current-context: k8s
+          kind: Config
+          preferences: {}
+          users:
+          - name: user
+            user:
+              token: ${{ secrets.KUBE_TOKEN }}
+          " > ~/.kube/config
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f kubernetes/
