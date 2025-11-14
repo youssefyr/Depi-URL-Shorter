@@ -6,7 +6,7 @@ A production-ready URL shortening service built with modern DevOps practices, fe
 
 **DEPI Program 2025 - Team 3**
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
 - [DevOps Stack](#devops-stack)
@@ -23,7 +23,7 @@ A production-ready URL shortening service built with modern DevOps practices, fe
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### System Components
 
@@ -187,7 +187,7 @@ Depi-url-short/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -266,7 +266,7 @@ docker exec -i url-shortener-postgres psql -U urlshortener -d urlshortener < bac
 
 ---
 
-## 💻 Development Workflow
+## Development Workflow
 
 ### Backend Development
 
@@ -339,7 +339,7 @@ docker-compose down -v
 
 ---
 
-## 🐳 Docker Configuration
+## Docker Configuration
 
 ### Multi-Stage Backend Dockerfile
 
@@ -442,7 +442,7 @@ backend:
 
 ---
 
-## ☸️ Kubernetes Deployment
+## Kubernetes Deployment
 
 ### Prerequisites
 
@@ -625,7 +625,7 @@ kubectl delete namespace url-shortener
 
 ---
 
-## 📊 Monitoring & Observability
+## Monitoring & Observability
 
 ### Custom Prometheus Metrics
 
@@ -808,7 +808,7 @@ kubectl port-forward svc/grafana 3002:3000 -n url-shortener
 
 ---
 
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
 ### GitHub Actions Workflow
 
@@ -904,7 +904,7 @@ KUBE_CONFIG          # Kubernetes cluster config (base64 encoded)
 
 ---
 
-## 🔒 Security Best Practices
+## Security Best Practices
 
 ### Environment Variables
 
@@ -970,7 +970,7 @@ spec:
 
 ---
 
-## 🚀 Performance & Scaling
+## Performance & Scaling
 
 ### Resource Optimization
 
@@ -1038,7 +1038,7 @@ spec:
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 

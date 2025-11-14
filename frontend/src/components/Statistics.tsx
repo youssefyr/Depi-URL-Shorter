@@ -34,7 +34,7 @@ const Statistics: React.FC = () => {
     fetchStats();
   }, [shortCode]);
 
-  const data = stats.map(stat => ({
+    const data = stats.map(stat => ({
     date: new Date(stat.clicked_at).toLocaleDateString(),
     clicks: 1,
   })).reduce((acc, curr) => {
@@ -45,7 +45,9 @@ const Statistics: React.FC = () => {
       acc.push(curr);
     }
     return acc;
-  }, [] as { date: string; clicks: number }[]);
+  }, [] as { date: string; clicks: number }[])
+  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
 
   if (loading) {
     return (
@@ -71,7 +73,7 @@ const Statistics: React.FC = () => {
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
       <div className="text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold mb-2">📊 Statistics for {shortCode}</h1>
+        <h1 className="text-4xl md:text-5xl font-bold mb-2">Statistics for {shortCode}</h1>
         <p className="text-base-content/70">Detailed insights into your shortened URL</p>
       </div>
 
