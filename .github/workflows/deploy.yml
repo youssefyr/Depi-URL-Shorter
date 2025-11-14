@@ -27,8 +27,8 @@ jobs:
 
       - name: Build and push all images
         run: |
-          docker-compose build
-          docker-compose push
+          docker compose build
+          docker compose push
 
       - name: Tag and push images with project name
         run: |
