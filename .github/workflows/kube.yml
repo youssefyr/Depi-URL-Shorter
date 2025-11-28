@@ -1,12 +1,8 @@
-name: Deploy to Kubernetes
+name: Deploy to Kubernetes [Production]
 
 on:
   workflow_run:
-    workflows: ["Build and Push Docker Images"]
-    types:
-      - completed
-    branches:
-      - main
+
 
 jobs:
   deploy:
@@ -16,29 +12,50 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v3
 
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
       - name: Set up Kubeconfig
         run: |
-          mkdir -p ~/.kube
-          echo "apiVersion: v1
-          clusters:
-          - cluster:
-              server: ${{ secrets.KUBE_SERVER }}
-              certificate-authority-data: ${{ secrets.KUBE_CERT_DATA }}
-            name: k8s
-          contexts:
-          - context:
-              cluster: k8s
-              user: user
-            name: k8s
-          current-context: k8s
-          kind: Config
-          preferences: {}
-          users:
-          - name: user
-            user:
-              token: ${{ secrets.KUBE_TOKEN }}
-          " > ~/.kube/config
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Verify Kubernetes connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace url-shortener --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Update image tags to use commit SHA
+        run: |
+          sed -i "s|image: .*backend.*|image: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:backend-${{ github.sha }}|g" kubernetes/backend.yml
+          sed -i "s|image: .*frontend.*|image: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:frontend-${{ github.sha }}|g" kubernetes/frontend.yml
 
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f kubernetes/
+
+      - name: Wait for deployments to be ready
+        run: |
+          kubectl rollout status deployment/backend -n url-shortener --timeout=5m
+          kubectl rollout status deployment/frontend -n url-shortener --timeout=5m
+
+      - name: Get deployment status
+        run: |
+          echo "=== Pods ==="
+          kubectl get pods -n url-shortener
+          echo "=== Services ==="
+          kubectl get svc -n url-shortener
+          echo "=== Deployments ==="
+          kubectl get deployments -n url-shortener
+
+      - name: Clean up kubeconfig
+        if: always()
+        run: |
+          rm -f $HOME/.kube/config

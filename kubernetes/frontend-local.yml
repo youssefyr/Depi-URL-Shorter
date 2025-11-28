@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: url-shortener
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: url-shortener
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      # Wait for backend to be ready first
+      initContainers:
+      - name: wait-for-backend
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z backend 3000; do
+            echo "Waiting for backend service..."
+            sleep 2
+          done
+          echo "Backend service is available!"
+          # Give backend extra time to fully initialize
+          sleep 5
+          echo "Backend should be ready now!"
+      containers:
+      - name: frontend
+        image: url-shortener-frontend:local
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+        env:
+        - name: BACKEND_URL
+          value: "http://backend:3000"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
