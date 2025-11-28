@@ -1,4 +1,3 @@
-# Prometheus
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,11 +6,351 @@ metadata:
 data:
   prometheus.yml: |
     global:
-      scrape_interval: 15s
+      scrape_interval: 5s
+      evaluation_interval: 5s
+    
     scrape_configs:
+      # Scrape Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['prometheus:9090']
+    
+      # Scrape backend (Node.js)
       - job_name: 'backend'
+        metrics_path: '/metrics'
         static_configs:
           - targets: ['backend:3000']
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: url-shortener
+data:
+  datasource.yml: |
+    apiVersion: 1
+    
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-config
+  namespace: url-shortener
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    
+    providers:
+      - name: 'URL Shortener Dashboards'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        updateIntervalSeconds: 10
+        options:
+          path: /var/lib/grafana/dashboards
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting-config
+  namespace: url-shortener
+data:
+  alerts.yml: |
+    apiVersion: 1
+    
+    groups:
+      - name: "backend-alerts"
+        folder: "Backend Alerts"
+        interval: 30s
+        rules:
+          # ========================================
+          # 1. High 404 Errors
+          # ========================================
+          - uid: "high-404-errors"
+            title: "High 404 Errors"
+            condition: "A"
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: "PBFA97CFB590B2093"
+                model:
+                  datasource:
+                    type: prometheus
+                    uid: "PBFA97CFB590B2093"
+                  expr: rate(failed_lookups_total[5m])
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  refId: A
+                  type: query
+                  conditions:
+                    - evaluator:
+                        params: [5]
+                        type: gt
+                      operator:
+                        type: and
+                      reducer:
+                        type: last
+                      type: query
+            noDataState: "OK"
+            execErrState: "Error"
+            for: 1m
+            annotations:
+              summary: "404 errors are too high"
+              description: "The rate of 404s exceeded the threshold (more than 5 per 5 minutes)."
+            labels:
+              severity: "warning"
+              service: "url-shortener"
+              metric: "failed_lookups_total"
+    
+          # ========================================
+          # 2. High Request Latency
+          # ========================================
+          - uid: "high-latency"
+            title: "High Request Latency"
+            condition: "A"
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: "PBFA97CFB590B2093"
+                model:
+                  datasource:
+                    type: prometheus
+                    uid: "PBFA97CFB590B2093"
+                  expr: histogram_quantile(0.95, sum(rate(request_latency_ms_bucket[5m])) by (le))
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  refId: A
+                  type: query
+                  conditions:
+                    - evaluator:
+                        params: [500]
+                        type: gt
+                      operator:
+                        type: and
+                      reducer:
+                        type: last
+                      type: query
+            noDataState: "OK"
+            execErrState: "Error"
+            for: 2m
+            annotations:
+              summary: "Request latency is too high"
+              description: "The 95th percentile latency exceeded 500ms over the last 5 minutes."
+            labels:
+              severity: "critical"
+              service: "url-shortener"
+              metric: "request_latency_ms"
+    
+          # ========================================
+          # 3. Low Redirect Success Rate
+          # ========================================
+          - uid: "low-redirect-success"
+            title: "Low Redirect Success Rate"
+            condition: "A"
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: "PBFA97CFB590B2093"
+                model:
+                  datasource:
+                    type: prometheus
+                    uid: "PBFA97CFB590B2093"
+                  expr: |
+                    rate(successful_redirects_total[5m]) 
+                    / (rate(successful_redirects_total[5m]) + rate(failed_lookups_total[5m]))
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  refId: A
+                  type: query
+                  conditions:
+                    - evaluator:
+                        params: [0.9]
+                        type: lt
+                      operator:
+                        type: and
+                      reducer:
+                        type: last
+                      type: query
+            noDataState: "OK"
+            execErrState: "Error"
+            for: 2m
+            annotations:
+              summary: "Redirect success rate dropped"
+              description: "Redirect success rate is below 90% — possible DB or routing issue."
+            labels:
+              severity: "warning"
+              service: "url-shortener"
+              metric: "successful_redirects_total"
+    
+          # ========================================
+          # 4. Low URL Shortening Activity
+          # ========================================
+          - uid: "low-url-activity"
+            title: "Low URL Shortening Activity"
+            condition: "A"
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 600
+                  to: 0
+                datasourceUid: "PBFA97CFB590B2093"
+                model:
+                  datasource:
+                    type: prometheus
+                    uid: "PBFA97CFB590B2093"
+                  expr: rate(urls_shortened_total[10m])
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  refId: A
+                  type: query
+                  conditions:
+                    - evaluator:
+                        params: [0.1]
+                        type: lt
+                      operator:
+                        type: and
+                      reducer:
+                        type: last
+                      type: query
+            noDataState: "OK"
+            execErrState: "Error"
+            for: 5m
+            annotations:
+              summary: "Low URL shortening activity detected"
+              description: "Fewer than 0.1 new URLs shortened per second in the last 10 minutes — check if the API is down or unused."
+            labels:
+              severity: "info"
+              service: "url-shortener"
+              metric: "urls_shortened_total"
+    
+          # ========================================
+          # 5. High CPU Usage
+          # ========================================
+          - uid: "high-cpu-usage"
+            title: "High CPU Usage"
+            condition: "A"
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: "PBFA97CFB590B2093"
+                model:
+                  datasource:
+                    type: prometheus
+                    uid: "PBFA97CFB590B2093"
+                  # Works with node_exporter or container metrics
+                  expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+                  refId: A
+                  type: query
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+                      operator:
+                        type: and
+                      reducer:
+                        type: last
+                      type: query
+            noDataState: "OK"
+            execErrState: "Error"
+            for: 2m
+            annotations:
+              summary: "High CPU usage detected"
+              description: "CPU utilization has been above 80% for the last 2 minutes. Check running processes or scaling."
+            labels:
+              severity: "critical"
+              service: "url-shortener"
+              metric: "cpu_usage"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-url-shortener
+  namespace: url-shortener
+data:
+  url_shortener_dashboard.json: |
+    {
+      "title": "URL Shortener Dashboard",
+      "schemaVersion": 36,
+      "version": 2,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "URL Creations per Second",
+          "targets": [
+            { "expr": "rate(urls_shortened_total[1m])" }
+          ],
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 6 }
+        },
+        {
+          "type": "timeseries",
+          "title": "Successful Redirects per Second",
+          "targets": [
+            { "expr": "rate(successful_redirects_total[1m])" }
+          ],
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 }
+        },
+        {
+          "type": "timeseries",
+          "title": "404 Errors per Second",
+          "targets": [
+            { "expr": "rate(failed_lookups_total[1m])" }
+          ],
+          "gridPos": { "x": 0, "y": 6, "w": 12, "h": 6 }
+        },
+        {
+          "type": "stat",
+          "title": "Total Shortened URLs",
+          "targets": [
+            { "expr": "sum(urls_shortened_total)" }
+          ],
+          "gridPos": { "x": 12, "y": 6, "w": 6, "h": 6 }
+        },
+        {
+          "type": "timeseries",
+          "title": "95th Percentile Request Latency (ms)",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(request_latency_ms_bucket[5m])) by (le))"
+            }
+          ],
+          "gridPos": { "x": 18, "y": 6, "w": 6, "h": 6 }
+        }
+      ]
+    }
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-secret
+  namespace: url-shortener
+type: Opaque
+stringData:
+  admin-user: admin
+  admin-password: admin
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,24 +368,25 @@ spec:
         app: prometheus
     spec:
       containers:
-        - name: prometheus
-          image: prom/prometheus:latest
-          args:
-            - "--config.file=/etc/prometheus/prometheus.yml"
-            - "--storage.tsdb.path=/prometheus"
-          ports:
-            - containerPort: 9090
-          volumeMounts:
-            - name: prometheus-config-volume
-              mountPath: /etc/prometheus/
-            - name: prometheus-storage-volume
-              mountPath: /prometheus
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus'
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
       volumes:
-        - name: prometheus-config-volume
-          configMap:
-            name: prometheus-config
-        - name: prometheus-storage-volume
-          emptyDir: {}
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-storage
+        emptyDir: {}
+
 ---
 apiVersion: v1
 kind: Service
@@ -60,34 +400,8 @@ spec:
     - protocol: TCP
       port: 9090
       targetPort: 9090
+  type: ClusterIP
 
-# Grafana
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana-secret
-  namespace: url-shortener
-type: Opaque
-data:
-  GF_SECURITY_ADMIN_USER: YWRtaW4=
-  GF_SECURITY_ADMIN_PASSWORD: YWRtaW4=
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-datasources
-  namespace: url-shortener
-data:
-  datasource.yml: |
-    apiVersion: 1
-    datasources:
-    - name: Prometheus
-      type: prometheus
-      url: http://prometheus:9090
-      isDefault: true
-      access: proxy
-      editable: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -104,21 +418,56 @@ spec:
       labels:
         app: grafana
     spec:
+      securityContext:
+        fsGroup: 472
+        runAsUser: 472
       containers:
-        - name: grafana
-          image: grafana/grafana:latest
-          ports:
-            - containerPort: 3000
-          envFrom:
-            - secretRef:
-                name: grafana-secret
-          volumeMounts:
-            - name: grafana-datasources
-              mountPath: /etc/grafana/provisioning/datasources
-      volumes:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secret
+              key: admin-user
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grafana-secret
+              key: admin-password
+        - name: GF_SERVER_HTTP_PORT
+          value: "3000"
+        - name: GF_PATHS_PROVISIONING
+          value: "/etc/grafana/provisioning"
+        volumeMounts:
         - name: grafana-datasources
-          configMap:
-            name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-dashboards-config
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: grafana-alerting-config
+          mountPath: /etc/grafana/provisioning/alerting
+        - name: grafana-dashboard-files
+          mountPath: /var/lib/grafana/dashboards
+        - name: grafana-storage
+          mountPath: /var/lib/grafana/data
+      volumes:
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources
+      - name: grafana-dashboards-config
+        configMap:
+          name: grafana-dashboards-config
+      - name: grafana-alerting-config
+        configMap:
+          name: grafana-alerting-config
+      - name: grafana-dashboard-files
+        configMap:
+          name: grafana-dashboard-url-shortener
+      - name: grafana-storage
+        emptyDir: {}
+
 ---
 apiVersion: v1
 kind: Service
@@ -128,8 +477,8 @@ metadata:
 spec:
   selector:
     app: grafana
-  type: LoadBalancer
   ports:
     - protocol: TCP
-      port: 8080
+      port: 3000
       targetPort: 3000
+  type: LoadBalancer
