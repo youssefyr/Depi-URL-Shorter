@@ -25,6 +25,377 @@ A production-ready URL shortening service built with modern DevOps practices, fe
 
 ## Architecture Overview
 
+## 📊 Project Diagrams
+
+### 1. System Architecture & Data Flow
+
+![System Architecture](diagrams/system-architecture.svg)
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800','noteBkgColor':'#fff3e0','noteTextColor':'#000','noteBorderColor':'#ff9800'}}}%%
+flowchart TB
+    subgraph UserLayer["👤 User Layer"]
+        U1["Web Browser"]
+    end
+    
+    subgraph FrontendLayer["🖥️ Frontend Layer - Port 3001/80"]
+        FE["React + TypeScript SPA"]
+        NGINX["Nginx Web Server"]
+        FE --> NGINX
+    end
+    
+    subgraph BackendLayer["⚙️ Backend Layer - Port 3000"]
+        API["Express API Server"]
+        ROUTES["Route Handlers"]
+        CTRL["URL Controller"]
+        SVC["Shortener Service"]
+        METRICS["Metrics Service"]
+        
+        API --> ROUTES
+        ROUTES --> CTRL
+        CTRL --> SVC
+        CTRL --> METRICS
+    end
+    
+    subgraph DataLayer["💾 Data Layer"]
+        PG[("PostgreSQL DB<br/>Port 5432")]
+        URLS["📊 urls table"]
+        CLICKS["📈 clicks table"]
+        
+        PG --> URLS
+        PG --> CLICKS
+    end
+    
+    subgraph MonitoringStack["📡 Monitoring Stack"]
+        PROM["Prometheus<br/>Port 9090"]
+        GRAF["Grafana<br/>Port 3002"]
+        DASH["📊 Dashboards"]
+        ALERTS["🔔 Alert Manager"]
+        
+        PROM --> GRAF
+        GRAF --> DASH
+        GRAF --> ALERTS
+    end
+    
+    U1 -->|"HTTP/HTTPS"| NGINX
+    NGINX -->|"API Calls"| API
+    SVC -->|"Read/Write"| PG
+    CTRL -->|"Track Clicks"| CLICKS
+    CTRL -->|"Record Metrics"| METRICS
+    METRICS -->|"/api/metrics"| PROM
+    
+    classDef userStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef frontendStyle fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#000
+    classDef backendStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef dataStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef monitoringStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    
+    class U1,UserLayer userStyle
+    class FE,NGINX,FrontendLayer frontendStyle
+    class API,ROUTES,CTRL,SVC,METRICS,BackendLayer backendStyle
+    class PG,URLS,CLICKS,DataLayer dataStyle
+    class PROM,GRAF,DASH,ALERTS,MonitoringStack monitoringStyle
+```
+
+### 2. CI/CD Pipeline & Deployment Flow
+
+![CI/CD Pipeline](diagrams/mermaid-diagram-2025-11-28-181002.svg)
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800'}}}%%
+flowchart LR
+    subgraph Development["💻 Development"]
+        DEV["👨‍💻 Developer"]
+        GIT["📁 Git Repository"]
+        COMMIT["git push"]
+        
+        DEV -->|"Code Changes"| COMMIT
+        COMMIT --> GIT
+    end
+    
+    subgraph GitHubActions["🔄 GitHub Actions Workflow"]
+        TRIGGER["⚡ Workflow Trigger<br/>on: push to main"]
+        CHECKOUT["📥 Checkout Code"]
+        
+        subgraph BuildStage["🏗️ Build Stage"]
+            BUILDX["🔧 Setup Docker Buildx"]
+            LOGIN["🔐 Docker Hub Login"]
+            BUILD_BE["📦 Build Backend Image"]
+            BUILD_FE["📦 Build Frontend Image"]
+            
+            BUILDX --> LOGIN
+            LOGIN --> BUILD_BE
+            LOGIN --> BUILD_FE
+        end
+        
+        subgraph PushStage["📤 Push Stage"]
+            TAG_BE["🏷️ Tag: backend-latest<br/>backend-SHA"]
+            TAG_FE["🏷️ Tag: frontend-latest<br/>frontend-SHA"]
+            PUSH["⬆️ Push to Docker Hub"]
+            
+            BUILD_BE --> TAG_BE
+            BUILD_FE --> TAG_FE
+            TAG_BE --> PUSH
+            TAG_FE --> PUSH
+        end
+        
+        TRIGGER --> CHECKOUT
+        CHECKOUT --> BUILDX
+    end
+    
+    subgraph ContainerRegistry["📦 Container Registry"]
+        DHUB["🐳 Docker Hub Repository"]
+        IMG_BE["Backend Images"]
+        IMG_FE["Frontend Images"]
+        
+        DHUB --> IMG_BE
+        DHUB --> IMG_FE
+    end
+    
+    subgraph DeploymentTarget["☸️ Deployment Target"]
+        K8S["Kubernetes Cluster"]
+        
+        subgraph K8sResources["📋 K8s Resources"]
+            NS["url-shortener namespace"]
+            DEPLOY_BE["🚀 Backend Deployment<br/>replicas: 3"]
+            DEPLOY_FE["🌐 Frontend Deployment<br/>replicas: 2"]
+            STS_PG["💾 PostgreSQL StatefulSet"]
+            SVC_LB["🌍 LoadBalancer Service"]
+            
+            NS --> DEPLOY_BE
+            NS --> DEPLOY_FE
+            NS --> STS_PG
+            NS --> SVC_LB
+        end
+        
+        HPA["📊 Horizontal Pod Autoscaler<br/>2-10 replicas"]
+        
+        DEPLOY_BE -.->|"Auto-scale"| HPA
+    end
+    
+    GIT -->|"webhook"| TRIGGER
+    PUSH --> DHUB
+    DHUB -->|"kubectl apply"| K8S
+    SVC_LB -->|"External IP"| USERS["👥 End Users"]
+    
+    classDef devStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef ciStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef buildStyle fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#000
+    classDef registryStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef k8sStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef userStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    
+    class DEV,GIT,COMMIT,Development devStyle
+    class TRIGGER,CHECKOUT ciStyle
+    class BUILDX,LOGIN,BUILD_BE,BUILD_FE,BuildStage buildStyle
+    class TAG_BE,TAG_FE,PUSH,PushStage buildStyle
+    class DHUB,IMG_BE,IMG_FE,ContainerRegistry registryStyle
+    class K8S,NS,DEPLOY_BE,DEPLOY_FE,STS_PG,SVC_LB,K8sResources,HPA k8sStyle
+    class USERS userStyle
+```
+
+### 3. Docker & Kubernetes Infrastructure
+
+![Infrastructure Diagram](diagrams/mermaid-diagram-2025-11-28-180816.svg)
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800'}}}%%
+graph TB
+    subgraph DevEnv["🐳 Development Environment - Docker Compose"]
+        subgraph AppNetwork["app-network"]
+            DC_FE["🌐 Frontend Container<br/>nginx:alpine<br/>Port: 3001→80"]
+            DC_BE["⚙️ Backend Container<br/>node:18-alpine<br/>Port: 3000"]
+            DC_PG[("💾 PostgreSQL Container<br/>postgres:15-alpine<br/>Port: 5432")]
+            
+            DC_FE -->|"API Requests"| DC_BE
+            DC_BE -->|"SQL Queries"| DC_PG
+        end
+        
+        subgraph MonitoringNetwork["monitoring network"]
+            DC_PROM["📊 Prometheus Container<br/>Port: 9090"]
+            DC_GRAF["📈 Grafana Container<br/>Port: 3002"]
+            
+            DC_BE -->|"/api/metrics"| DC_PROM
+            DC_PROM -->|"Datasource"| DC_GRAF
+        end
+        
+        subgraph Volumes["💿 Volumes"]
+            VOL_PG["postgres_data"]
+            VOL_PROM["prometheus_data"]
+            VOL_GRAF["grafana_data"]
+        end
+        
+        DC_PG -.->|"Persist"| VOL_PG
+        DC_PROM -.->|"Persist"| VOL_PROM
+        DC_GRAF -.->|"Persist"| VOL_GRAF
+    end
+    
+    subgraph ProdEnv["☸️ Production Environment - Kubernetes"]
+        subgraph URLNamespace["url-shortener Namespace"]
+            subgraph FrontendPod["Frontend Pod"]
+                K8S_FE["🌐 frontend-xxx<br/>Resources:<br/>256Mi/512Mi"]
+            end
+            
+            subgraph BackendPods["Backend Pods - HPA Managed"]
+                K8S_BE1["⚙️ backend-xxx-1"]
+                K8S_BE2["⚙️ backend-xxx-2"]
+                K8S_BE3["⚙️ backend-xxx-3"]
+            end
+            
+            subgraph DatabaseSTS["Database StatefulSet"]
+                K8S_PG["💾 postgres-0<br/>PVC: 10Gi"]
+            end
+            
+            subgraph MonitoringStack["Monitoring Stack"]
+                K8S_PROM["📊 prometheus-xxx"]
+                K8S_GRAF["📈 grafana-xxx"]
+            end
+            
+            subgraph Services["Services"]
+                SVC_FE["🌍 frontend Service<br/>Type: LoadBalancer<br/>Port: 80"]
+                SVC_BE["🔗 backend Service<br/>Type: ClusterIP<br/>Port: 3000"]
+                SVC_PG["🗄️ postgres Service<br/>Type: ClusterIP<br/>Port: 5432"]
+            end
+            
+            subgraph PersistentStorage["💿 Persistent Storage"]
+                PVC["PersistentVolumeClaim<br/>postgres-storage"]
+                PV["PersistentVolume<br/>10Gi ReadWriteOnce"]
+            end
+            
+            K8S_FE --> SVC_FE
+            K8S_BE1 --> SVC_BE
+            K8S_BE2 --> SVC_BE
+            K8S_BE3 --> SVC_BE
+            K8S_PG --> SVC_PG
+            
+            SVC_FE -->|"API Calls"| SVC_BE
+            SVC_BE -->|"DB Queries"| SVC_PG
+            
+            K8S_PG -.->|"Mount"| PVC
+            PVC -.->|"Bound"| PV
+            
+            SVC_BE -->|"Scrape /metrics"| K8S_PROM
+            K8S_PROM -->|"Query"| K8S_GRAF
+        end
+        
+        subgraph HealthChecks["💚 Health Checks & Probes"]
+            LIVENESS["✅ Liveness Probe<br/>GET /health<br/>initialDelay: 30s"]
+            READINESS["🔍 Readiness Probe<br/>GET /health<br/>initialDelay: 5s"]
+        end
+        
+        K8S_BE1 -.->|"Monitored by"| LIVENESS
+        K8S_BE1 -.->|"Monitored by"| READINESS
+        
+        INTERNET["🌐 Internet"] -->|"HTTP/HTTPS"| SVC_FE
+    end
+    
+    subgraph SecretsManagement["🔐 Secrets Management"]
+        SEC_PG["postgres-secret<br/>POSTGRES_USER<br/>POSTGRES_PASSWORD"]
+        SEC_BE["backend-secret<br/>DB_PASSWORD<br/>JWT_SECRET"]
+    end
+    
+    K8S_PG -.->|"Uses"| SEC_PG
+    K8S_BE1 -.->|"Uses"| SEC_BE
+    K8S_BE2 -.->|"Uses"| SEC_BE
+    K8S_BE3 -.->|"Uses"| SEC_BE
+    
+    classDef frontendStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef backendStyle fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#000
+    classDef dataStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef monitoringStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef serviceStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef internetStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    classDef volumeStyle fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
+    classDef secretStyle fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000
+    classDef healthStyle fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#000
+    
+    class DC_FE,K8S_FE frontendStyle
+    class DC_BE,K8S_BE1,K8S_BE2,K8S_BE3 backendStyle
+    class DC_PG,K8S_PG dataStyle
+    class DC_PROM,DC_GRAF,K8S_PROM,K8S_GRAF monitoringStyle
+    class SVC_FE,SVC_BE,SVC_PG serviceStyle
+    class INTERNET internetStyle
+    class VOL_PG,VOL_PROM,VOL_GRAF,PVC,PV volumeStyle
+    class SEC_PG,SEC_BE secretStyle
+    class LIVENESS,READINESS healthStyle
+```
+
+### Diagram Explanations
+
+#### Diagram 1: System Architecture & Data Flow
+**Purpose**: Shows the complete system architecture and how data flows between components
+
+**Key Features**:
+- 👤 **User interaction layer** - Web browser accessing the application
+- 🖥️ **Frontend SPA** - React + TypeScript served by Nginx
+- ⚙️ **Backend API** - Express server with layered architecture (Routes → Controller → Services)
+- 💾 **Database schema** - PostgreSQL with urls and clicks tables
+- 📡 **Monitoring stack** - Prometheus collecting metrics, Grafana visualizing
+- 📊 **Metrics collection path** - Backend exposes /api/metrics endpoint for Prometheus scraping
+
+**Data Flow**:
+1. User sends HTTP/HTTPS requests to Nginx
+2. Nginx forwards API calls to Express backend
+3. Backend processes requests through controller and service layers
+4. Service layer performs database operations
+5. Metrics are recorded and exposed for Prometheus
+6. Grafana queries Prometheus for dashboard visualization
+
+---
+
+#### Diagram 2: CI/CD Pipeline & Deployment Flow
+**Purpose**: Illustrates the complete DevOps workflow from code commit to production deployment
+
+**Key Features**:
+- 💻 **Development workflow** - Developer pushes code to Git repository
+- 🔄 **GitHub Actions** - Automated workflow triggered on push to main branch
+- 🏗️ **Build stage** - Docker Buildx builds backend and frontend images
+- 📤 **Push stage** - Images tagged with `latest` and commit SHA, pushed to Docker Hub
+- 📦 **Container registry** - Docker Hub stores versioned images
+- ☸️ **Kubernetes deployment** - kubectl applies manifests to cluster
+- 📊 **Auto-scaling** - HPA manages 2-10 backend replicas based on CPU/memory
+- 🌍 **External access** - LoadBalancer service exposes frontend to end users
+
+**Pipeline Flow**:
+1. Developer commits and pushes code changes
+2. GitHub webhook triggers Actions workflow
+3. Workflow checks out code and sets up Docker Buildx
+4. Logs into Docker Hub using secrets
+5. Builds backend and frontend images in parallel
+6. Tags images with both `latest` and git commit SHA
+7. Pushes images to Docker Hub registry
+8. Applies Kubernetes manifests to deploy new versions
+9. LoadBalancer routes external traffic to application
+
+---
+
+#### Diagram 3: Docker & Kubernetes Infrastructure
+**Purpose**: Compares development (Docker Compose) vs production (Kubernetes) infrastructure
+
+**Development Environment Features** (Docker Compose):
+- 🐳 **app-network** - Bridge network connecting frontend, backend, and PostgreSQL
+- 📡 **monitoring network** - Separate network for Prometheus and Grafana
+- 💿 **Volume persistence** - Named volumes for database and monitoring data
+- 🌐 **Port mapping** - Exposed ports: 3001 (frontend), 3000 (backend), 5432 (postgres), 9090 (prometheus), 3002 (grafana)
+
+**Production Environment Features** (Kubernetes):
+- ☸️ **Namespace isolation** - All resources in `url-shortener` namespace
+- 🚀 **Pod architecture** - Frontend (1 replica), Backend (3 replicas with HPA), PostgreSQL (StatefulSet)
+- 🔗 **Service types** - ClusterIP for internal communication, LoadBalancer for external access
+- 💾 **Persistent storage** - PersistentVolumeClaim (10Gi) bound to PersistentVolume for database
+- 💚 **Health checks** - Liveness probe (30s delay) and Readiness probe (5s delay) for backend pods
+- 🔐 **Secrets management** - Kubernetes secrets for database and backend credentials
+- 📊 **Horizontal scaling** - HPA auto-scales backend from 2-10 replicas based on metrics
+
+**Key Differences**:
+- Development uses simple Docker networks; Production uses Kubernetes Services
+- Development has single containers; Production has multiple replicas with load balancing
+- Development uses Docker volumes; Production uses PersistentVolumeClaims
+- Production includes health probes, resource limits, and auto-scaling
+
+---
+
+
 ### System Components
 
 ```

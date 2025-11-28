@@ -53,7 +53,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
       <div className="text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold mb-2">📊 Dashboard</h1>
+        <h1 className="text-4xl md:text-5xl font-bold mb-2">Dashboard</h1>
         <p className="text-base-content/70">Real-time metrics and analytics</p>
       </div>
 
