@@ -29,7 +29,6 @@ A production-ready URL shortening service built with modern DevOps practices, fe
 
 ### 1. System Architecture & Data Flow
 
-![System Architecture](diagrams/system-architecture.svg)
 
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800','noteBkgColor':'#fff3e0','noteTextColor':'#000','noteBorderColor':'#ff9800'}}}%%
@@ -99,7 +98,6 @@ flowchart TB
 
 ### 2. CI/CD Pipeline & Deployment Flow
 
-![CI/CD Pipeline](diagrams/mermaid-diagram-2025-11-28-181002.svg)
 
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800'}}}%%
@@ -196,7 +194,6 @@ flowchart LR
 
 ### 3. Docker & Kubernetes Infrastructure
 
-![Infrastructure Diagram](diagrams/mermaid-diagram-2025-11-28-180816.svg)
 
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800'}}}%%
