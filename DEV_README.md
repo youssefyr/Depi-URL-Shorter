@@ -153,6 +153,280 @@ The application consists of five main layers:
 - Network policies control pod-to-pod communication
 - All resources isolated in `url-shortener` namespace
 
+### Additional Architecture Diagrams
+
+#### CI/CD Pipeline & Deployment Flow
+
+This diagram shows the complete automated deployment workflow from code commit to production:
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#2563eb','primaryTextColor':'#fff','primaryBorderColor':'#1e40af','lineColor':'#3b82f6','secondaryColor':'#10b981','tertiaryColor':'#f59e0b','noteBkgColor':'#fef3c7','noteTextColor':'#000','noteBorderColor':'#f59e0b'}}}%%
+flowchart LR
+    subgraph Development["Development"]
+        DEV["Developer"]
+        GIT["Git Repository"]
+        COMMIT["git push"]
+        
+        DEV -->|"Code Changes"| COMMIT
+        COMMIT --> GIT
+    end
+    
+    subgraph GitHubActions["GitHub Actions Workflow"]
+        TRIGGER["Workflow Trigger<br/>on: push to main"]
+        CHECKOUT["Checkout Code"]
+        
+        subgraph BuildStage["Build Stage"]
+            BUILDX["Setup Docker Buildx"]
+            LOGIN["Docker Hub Login"]
+            BUILD_BE["Build Backend Image"]
+            BUILD_FE["Build Frontend Image"]
+            
+            BUILDX --> LOGIN
+            LOGIN --> BUILD_BE
+            LOGIN --> BUILD_FE
+        end
+        
+        subgraph PushStage["Push Stage"]
+            TAG_BE["Tag: backend-latest<br/>backend-SHA"]
+            TAG_FE["Tag: frontend-latest<br/>frontend-SHA"]
+            PUSH["Push to Docker Hub"]
+            
+            BUILD_BE --> TAG_BE
+            BUILD_FE --> TAG_FE
+            TAG_BE --> PUSH
+            TAG_FE --> PUSH
+        end
+        
+        TRIGGER --> CHECKOUT
+        CHECKOUT --> BUILDX
+    end
+    
+    subgraph ContainerRegistry["Container Registry"]
+        DHUB["Docker Hub Repository"]
+        IMG_BE["Backend Images"]
+        IMG_FE["Frontend Images"]
+        
+        DHUB --> IMG_BE
+        DHUB --> IMG_FE
+    end
+    
+    subgraph DeploymentTarget["Deployment Target"]
+        K8S["Kubernetes Cluster"]
+        
+        subgraph K8sResources["K8s Resources"]
+            NS["url-shortener namespace"]
+            DEPLOY_BE["Backend Deployment<br/>replicas: 3"]
+            DEPLOY_FE["Frontend Deployment<br/>replicas: 2"]
+            STS_PG["PostgreSQL StatefulSet"]
+            SVC_LB["LoadBalancer Service"]
+            
+            NS --> DEPLOY_BE
+            NS --> DEPLOY_FE
+            NS --> STS_PG
+            NS --> SVC_LB
+        end
+        
+        HPA["Horizontal Pod Autoscaler<br/>2-10 replicas"]
+        
+        DEPLOY_BE -.->|"Auto-scale"| HPA
+    end
+    
+    GIT -->|"webhook"| TRIGGER
+    PUSH --> DHUB
+    DHUB -->|"kubectl apply"| K8S
+    SVC_LB -->|"External IP"| USERS["End Users"]
+    
+    classDef devStyle fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#000
+    classDef ciStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#000
+    classDef buildStyle fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#000
+    classDef registryStyle fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#000
+    classDef k8sStyle fill:#e9d5ff,stroke:#a855f7,stroke-width:2px,color:#000
+    classDef userStyle fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#000
+    
+    class DEV,GIT,COMMIT,Development devStyle
+    class TRIGGER,CHECKOUT ciStyle
+    class BUILDX,LOGIN,BUILD_BE,BUILD_FE,BuildStage buildStyle
+    class TAG_BE,TAG_FE,PUSH,PushStage buildStyle
+    class DHUB,IMG_BE,IMG_FE,ContainerRegistry registryStyle
+    class K8S,NS,DEPLOY_BE,DEPLOY_FE,STS_PG,SVC_LB,K8sResources,HPA k8sStyle
+    class USERS userStyle
+```
+
+**Key Pipeline Features:**
+- Developer pushes code to Git repository
+- GitHub Actions workflow triggers automatically on main branch push
+- Docker Buildx builds backend and frontend images in parallel
+- Images tagged with both `latest` and commit SHA for versioning
+- Images pushed to Docker Hub registry
+- Kubernetes deployment updates with new images
+- HPA manages backend replicas (2-10 pods) based on load
+- LoadBalancer exposes frontend to end users
+
+**Pipeline Flow:**
+1. Code changes committed and pushed to repository
+2. GitHub webhook triggers Actions workflow
+3. Workflow checks out code and sets up Docker Buildx
+4. Logs into Docker Hub using repository secrets
+5. Builds backend and frontend images concurrently
+6. Tags images with `latest` and git commit SHA
+7. Pushes all tagged images to Docker Hub
+8. Updates Kubernetes manifests with new image tags
+9. Applies manifests to cluster via kubectl
+10. Waits for rollout to complete and verifies pod health
+
+---
+
+#### Docker & Kubernetes Infrastructure
+
+This diagram compares the development environment (Docker Compose) with the production environment (Kubernetes):
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#2563eb','primaryTextColor':'#fff','primaryBorderColor':'#1e40af','lineColor':'#3b82f6','secondaryColor':'#10b981','tertiaryColor':'#f59e0b','noteBkgColor':'#fef3c7','noteTextColor':'#000','noteBorderColor':'#f59e0b'}}}%%
+graph TB
+    subgraph DevEnv["Development Environment - Docker Compose"]
+        subgraph AppNetwork["app-network"]
+            DC_FE["Frontend Container<br/>nginx:alpine<br/>Port: 3001→80"]
+            DC_BE["Backend Container<br/>node:18-alpine<br/>Port: 3000"]
+            DC_PG[("PostgreSQL Container<br/>postgres:15-alpine<br/>Port: 5432")]
+            
+            DC_FE -->|"API Requests"| DC_BE
+            DC_BE -->|"SQL Queries"| DC_PG
+        end
+        
+        subgraph MonitoringNetwork["monitoring network"]
+            DC_PROM["Prometheus Container<br/>Port: 9090"]
+            DC_GRAF["Grafana Container<br/>Port: 3002"]
+            
+            DC_BE -->|"/api/metrics"| DC_PROM
+            DC_PROM -->|"Datasource"| DC_GRAF
+        end
+        
+        subgraph Volumes["Volumes"]
+            VOL_PG["postgres_data"]
+            VOL_PROM["prometheus_data"]
+            VOL_GRAF["grafana_data"]
+        end
+        
+        DC_PG -.->|"Persist"| VOL_PG
+        DC_PROM -.->|"Persist"| VOL_PROM
+        DC_GRAF -.->|"Persist"| VOL_GRAF
+    end
+    
+    subgraph ProdEnv["Production Environment - Kubernetes"]
+        subgraph URLNamespace["url-shortener Namespace"]
+            subgraph FrontendPod["Frontend Pod"]
+                K8S_FE["frontend-xxx<br/>Resources:<br/>256Mi/512Mi"]
+            end
+            
+            subgraph BackendPods["Backend Pods - HPA Managed"]
+                K8S_BE1["backend-xxx-1"]
+                K8S_BE2["backend-xxx-2"]
+                K8S_BE3["backend-xxx-3"]
+            end
+            
+            subgraph DatabaseSTS["Database StatefulSet"]
+                K8S_PG["postgres-0<br/>PVC: 10Gi"]
+            end
+            
+            subgraph MonitoringStack["Monitoring Stack"]
+                K8S_PROM["prometheus-xxx"]
+                K8S_GRAF["grafana-xxx"]
+            end
+            
+            subgraph Services["Services"]
+                SVC_FE["frontend Service<br/>Type: LoadBalancer<br/>Port: 80"]
+                SVC_BE["backend Service<br/>Type: ClusterIP<br/>Port: 3000"]
+                SVC_PG["postgres Service<br/>Type: ClusterIP<br/>Port: 5432"]
+            end
+            
+            subgraph PersistentStorage["Persistent Storage"]
+                PVC["PersistentVolumeClaim<br/>postgres-storage"]
+                PV["PersistentVolume<br/>10Gi ReadWriteOnce"]
+            end
+            
+            K8S_FE --> SVC_FE
+            K8S_BE1 --> SVC_BE
+            K8S_BE2 --> SVC_BE
+            K8S_BE3 --> SVC_BE
+            K8S_PG --> SVC_PG
+            
+            SVC_FE -->|"API Calls"| SVC_BE
+            SVC_BE -->|"DB Queries"| SVC_PG
+            
+            K8S_PG -.->|"Mount"| PVC
+            PVC -.->|"Bound"| PV
+            
+            SVC_BE -->|"Scrape /metrics"| K8S_PROM
+            K8S_PROM -->|"Query"| K8S_GRAF
+        end
+        
+        subgraph HealthChecks["Health Checks & Probes"]
+            LIVENESS["Liveness Probe<br/>GET /health<br/>initialDelay: 30s"]
+            READINESS["Readiness Probe<br/>GET /health<br/>initialDelay: 5s"]
+        end
+        
+        K8S_BE1 -.->|"Monitored by"| LIVENESS
+        K8S_BE1 -.->|"Monitored by"| READINESS
+        
+        INTERNET["Internet"] -->|"HTTP/HTTPS"| SVC_FE
+    end
+    
+    subgraph SecretsManagement["Secrets Management"]
+        SEC_PG["postgres-secret<br/>POSTGRES_USER<br/>POSTGRES_PASSWORD"]
+        SEC_BE["backend-secret<br/>DB_PASSWORD<br/>JWT_SECRET"]
+    end
+    
+    K8S_PG -.->|"Uses"| SEC_PG
+    K8S_BE1 -.->|"Uses"| SEC_BE
+    K8S_BE2 -.->|"Uses"| SEC_BE
+    K8S_BE3 -.->|"Uses"| SEC_BE
+    
+    classDef frontendStyle fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#000
+    classDef backendStyle fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#000
+    classDef dataStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#000
+    classDef monitoringStyle fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#000
+    classDef serviceStyle fill:#e9d5ff,stroke:#a855f7,stroke-width:2px,color:#000
+    classDef internetStyle fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#000
+    classDef volumeStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#000
+    classDef secretStyle fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#000
+    classDef healthStyle fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#000
+    
+    class DC_FE,K8S_FE frontendStyle
+    class DC_BE,K8S_BE1,K8S_BE2,K8S_BE3 backendStyle
+    class DC_PG,K8S_PG dataStyle
+    class DC_PROM,DC_GRAF,K8S_PROM,K8S_GRAF monitoringStyle
+    class SVC_FE,SVC_BE,SVC_PG serviceStyle
+    class INTERNET internetStyle
+    class VOL_PG,VOL_PROM,VOL_GRAF,PVC,PV volumeStyle
+    class SEC_PG,SEC_BE secretStyle
+    class LIVENESS,READINESS healthStyle
+```
+
+**Development Environment (Docker Compose):**
+- app-network connects frontend, backend, and PostgreSQL
+- Separate monitoring network for Prometheus and Grafana
+- Named volumes provide data persistence
+- Simple port mapping exposes services to localhost
+- Single container per service for simplicity
+
+**Production Environment (Kubernetes):**
+- All resources isolated in url-shortener namespace
+- Frontend deployment with 1 replica
+- Backend deployment with 3 replicas managed by HPA
+- PostgreSQL StatefulSet with persistent volume
+- ClusterIP services for internal communication
+- LoadBalancer service for external frontend access
+- Liveness and readiness probes ensure pod health
+- Secrets management for sensitive credentials
+- Resource requests and limits for each pod
+
+**Key Infrastructure Differences:**
+- Development uses Docker networks; Production uses Kubernetes Services
+- Development has single containers; Production has replica sets with load balancing
+- Development uses named volumes; Production uses PersistentVolumeClaims
+- Production adds health probes, resource limits, and horizontal pod autoscaling
+- Production includes namespace isolation and secrets management
+
 ---
 
 ## Technology Stack
@@ -1276,10 +1550,10 @@ kubectl get all -n url-shortener
 kubectl get events -n url-shortener --sort-by='.lastTimestamp'
 
 # Previous container logs (for crashed pods)
-kubectl logs <pod-name> -n url-shortener --previous
+kubectl logs -f deployment/backend -n url-shortener
 
 # Interactive shell
-kubectl exec -it <pod-name> -n url-shortener -- sh
+kubectl exec -it deployment/backend -n url-shortener -- sh
 
 # Copy files from pod
 kubectl cp url-shortener/<pod-name>:/path/to/file ./local-file
