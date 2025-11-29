@@ -1,49 +1,60 @@
-# URL Shortener - DevOps Implementation Guide
+# URL Shortener - Complete DevOps Documentation
 
-## 🚀 Project Overview
+## Project Overview
 
-A production-ready URL shortening service built with modern DevOps practices, featuring full containerization, comprehensive monitoring, and automated deployment pipelines. This project demonstrates enterprise-grade infrastructure management, observability, and CI/CD workflows.
+This is a production-ready URL shortening service built with modern DevOps practices. The project demonstrates enterprise-grade infrastructure management, comprehensive monitoring, and automated deployment pipelines. It was developed as part of the DEPI Program 2025 by Team 3.
 
-**DEPI Program 2025 - Team 3**
+The application provides a complete URL shortening solution with real-time analytics, QR code generation, and full observability through Prometheus and Grafana.
+
+**Key Features:**
+- Modern React frontend with TypeScript
+- RESTful API backend with Express and PostgreSQL
+- Complete containerization with Docker
+- Kubernetes orchestration support
+- Prometheus metrics collection
+- Grafana dashboards and alerting
+- Automated CI/CD with GitHub Actions
+- Health checks and auto-scaling
 
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
-- [DevOps Stack](#devops-stack)
+- [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
-- [Development Workflow](#development-workflow)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation Methods](#installation-methods)
+  - [Running with Docker Compose](#running-with-docker-compose)
+  - [Running on Kubernetes (Kind)](#running-on-kubernetes-kind)
+- [Development Guide](#development-guide)
 - [Docker Configuration](#docker-configuration)
 - [Kubernetes Deployment](#kubernetes-deployment)
-- [Monitoring & Observability](#monitoring--observability)
+- [Monitoring Setup](#monitoring-setup)
 - [CI/CD Pipeline](#cicd-pipeline)
-- [Security Best Practices](#security-best-practices)
-- [Performance & Scaling](#performance--scaling)
+- [Security Practices](#security-practices)
+- [Performance Optimization](#performance-optimization)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Architecture Overview
 
-## 📊 Project Diagrams
-
-### 1. System Architecture & Data Flow
-
+The system follows a microservices architecture with clear separation of concerns:
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800','noteBkgColor':'#fff3e0','noteTextColor':'#000','noteBorderColor':'#ff9800'}}}%%
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#2563eb','primaryTextColor':'#fff','primaryBorderColor':'#1e40af','lineColor':'#3b82f6','secondaryColor':'#10b981','tertiaryColor':'#f59e0b','noteBkgColor':'#fef3c7','noteTextColor':'#000','noteBorderColor':'#f59e0b'}}}%%
 flowchart TB
-    subgraph UserLayer["👤 User Layer"]
+    subgraph UserLayer["User Layer"]
         U1["Web Browser"]
     end
     
-    subgraph FrontendLayer["🖥️ Frontend Layer - Port 3001/80"]
+    subgraph FrontendLayer["Frontend Layer - Port 3001/80"]
         FE["React + TypeScript SPA"]
         NGINX["Nginx Web Server"]
         FE --> NGINX
     end
     
-    subgraph BackendLayer["⚙️ Backend Layer - Port 3000"]
+    subgraph BackendLayer["Backend Layer - Port 3000"]
         API["Express API Server"]
         ROUTES["Route Handlers"]
         CTRL["URL Controller"]
@@ -56,20 +67,20 @@ flowchart TB
         CTRL --> METRICS
     end
     
-    subgraph DataLayer["💾 Data Layer"]
+    subgraph DataLayer["Data Layer"]
         PG[("PostgreSQL DB<br/>Port 5432")]
-        URLS["📊 urls table"]
-        CLICKS["📈 clicks table"]
+        URLS["urls table"]
+        CLICKS["clicks table"]
         
         PG --> URLS
         PG --> CLICKS
     end
     
-    subgraph MonitoringStack["📡 Monitoring Stack"]
+    subgraph MonitoringStack["Monitoring Stack"]
         PROM["Prometheus<br/>Port 9090"]
         GRAF["Grafana<br/>Port 3002"]
-        DASH["📊 Dashboards"]
-        ALERTS["🔔 Alert Manager"]
+        DASH["Dashboards"]
+        ALERTS["Alert Manager"]
         
         PROM --> GRAF
         GRAF --> DASH
@@ -83,11 +94,11 @@ flowchart TB
     CTRL -->|"Record Metrics"| METRICS
     METRICS -->|"/api/metrics"| PROM
     
-    classDef userStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-    classDef frontendStyle fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#000
-    classDef backendStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    classDef dataStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
-    classDef monitoringStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef userStyle fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#000
+    classDef frontendStyle fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#000
+    classDef backendStyle fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#000
+    classDef dataStyle fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#000
+    classDef monitoringStyle fill:#e9d5ff,stroke:#a855f7,stroke-width:2px,color:#000
     
     class U1,UserLayer userStyle
     class FE,NGINX,FrontendLayer frontendStyle
@@ -96,492 +107,233 @@ flowchart TB
     class PROM,GRAF,DASH,ALERTS,MonitoringStack monitoringStyle
 ```
 
-### 2. CI/CD Pipeline & Deployment Flow
-
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800'}}}%%
-flowchart LR
-    subgraph Development["💻 Development"]
-        DEV["👨‍💻 Developer"]
-        GIT["📁 Git Repository"]
-        COMMIT["git push"]
-        
-        DEV -->|"Code Changes"| COMMIT
-        COMMIT --> GIT
-    end
-    
-    subgraph GitHubActions["🔄 GitHub Actions Workflow"]
-        TRIGGER["⚡ Workflow Trigger<br/>on: push to main"]
-        CHECKOUT["📥 Checkout Code"]
-        
-        subgraph BuildStage["🏗️ Build Stage"]
-            BUILDX["🔧 Setup Docker Buildx"]
-            LOGIN["🔐 Docker Hub Login"]
-            BUILD_BE["📦 Build Backend Image"]
-            BUILD_FE["📦 Build Frontend Image"]
-            
-            BUILDX --> LOGIN
-            LOGIN --> BUILD_BE
-            LOGIN --> BUILD_FE
-        end
-        
-        subgraph PushStage["📤 Push Stage"]
-            TAG_BE["🏷️ Tag: backend-latest<br/>backend-SHA"]
-            TAG_FE["🏷️ Tag: frontend-latest<br/>frontend-SHA"]
-            PUSH["⬆️ Push to Docker Hub"]
-            
-            BUILD_BE --> TAG_BE
-            BUILD_FE --> TAG_FE
-            TAG_BE --> PUSH
-            TAG_FE --> PUSH
-        end
-        
-        TRIGGER --> CHECKOUT
-        CHECKOUT --> BUILDX
-    end
-    
-    subgraph ContainerRegistry["📦 Container Registry"]
-        DHUB["🐳 Docker Hub Repository"]
-        IMG_BE["Backend Images"]
-        IMG_FE["Frontend Images"]
-        
-        DHUB --> IMG_BE
-        DHUB --> IMG_FE
-    end
-    
-    subgraph DeploymentTarget["☸️ Deployment Target"]
-        K8S["Kubernetes Cluster"]
-        
-        subgraph K8sResources["📋 K8s Resources"]
-            NS["url-shortener namespace"]
-            DEPLOY_BE["🚀 Backend Deployment<br/>replicas: 3"]
-            DEPLOY_FE["🌐 Frontend Deployment<br/>replicas: 2"]
-            STS_PG["💾 PostgreSQL StatefulSet"]
-            SVC_LB["🌍 LoadBalancer Service"]
-            
-            NS --> DEPLOY_BE
-            NS --> DEPLOY_FE
-            NS --> STS_PG
-            NS --> SVC_LB
-        end
-        
-        HPA["📊 Horizontal Pod Autoscaler<br/>2-10 replicas"]
-        
-        DEPLOY_BE -.->|"Auto-scale"| HPA
-    end
-    
-    GIT -->|"webhook"| TRIGGER
-    PUSH --> DHUB
-    DHUB -->|"kubectl apply"| K8S
-    SVC_LB -->|"External IP"| USERS["👥 End Users"]
-    
-    classDef devStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-    classDef ciStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    classDef buildStyle fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#000
-    classDef registryStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
-    classDef k8sStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
-    classDef userStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
-    
-    class DEV,GIT,COMMIT,Development devStyle
-    class TRIGGER,CHECKOUT ciStyle
-    class BUILDX,LOGIN,BUILD_BE,BUILD_FE,BuildStage buildStyle
-    class TAG_BE,TAG_FE,PUSH,PushStage buildStyle
-    class DHUB,IMG_BE,IMG_FE,ContainerRegistry registryStyle
-    class K8S,NS,DEPLOY_BE,DEPLOY_FE,STS_PG,SVC_LB,K8sResources,HPA k8sStyle
-    class USERS userStyle
-```
-
-### 3. Docker & Kubernetes Infrastructure
-
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1e88e5','primaryTextColor':'#fff','primaryBorderColor':'#0d47a1','lineColor':'#1976d2','secondaryColor':'#4caf50','tertiaryColor':'#ff9800'}}}%%
-graph TB
-    subgraph DevEnv["🐳 Development Environment - Docker Compose"]
-        subgraph AppNetwork["app-network"]
-            DC_FE["🌐 Frontend Container<br/>nginx:alpine<br/>Port: 3001→80"]
-            DC_BE["⚙️ Backend Container<br/>node:18-alpine<br/>Port: 3000"]
-            DC_PG[("💾 PostgreSQL Container<br/>postgres:15-alpine<br/>Port: 5432")]
-            
-            DC_FE -->|"API Requests"| DC_BE
-            DC_BE -->|"SQL Queries"| DC_PG
-        end
-        
-        subgraph MonitoringNetwork["monitoring network"]
-            DC_PROM["📊 Prometheus Container<br/>Port: 9090"]
-            DC_GRAF["📈 Grafana Container<br/>Port: 3002"]
-            
-            DC_BE -->|"/api/metrics"| DC_PROM
-            DC_PROM -->|"Datasource"| DC_GRAF
-        end
-        
-        subgraph Volumes["💿 Volumes"]
-            VOL_PG["postgres_data"]
-            VOL_PROM["prometheus_data"]
-            VOL_GRAF["grafana_data"]
-        end
-        
-        DC_PG -.->|"Persist"| VOL_PG
-        DC_PROM -.->|"Persist"| VOL_PROM
-        DC_GRAF -.->|"Persist"| VOL_GRAF
-    end
-    
-    subgraph ProdEnv["☸️ Production Environment - Kubernetes"]
-        subgraph URLNamespace["url-shortener Namespace"]
-            subgraph FrontendPod["Frontend Pod"]
-                K8S_FE["🌐 frontend-xxx<br/>Resources:<br/>256Mi/512Mi"]
-            end
-            
-            subgraph BackendPods["Backend Pods - HPA Managed"]
-                K8S_BE1["⚙️ backend-xxx-1"]
-                K8S_BE2["⚙️ backend-xxx-2"]
-                K8S_BE3["⚙️ backend-xxx-3"]
-            end
-            
-            subgraph DatabaseSTS["Database StatefulSet"]
-                K8S_PG["💾 postgres-0<br/>PVC: 10Gi"]
-            end
-            
-            subgraph MonitoringStack["Monitoring Stack"]
-                K8S_PROM["📊 prometheus-xxx"]
-                K8S_GRAF["📈 grafana-xxx"]
-            end
-            
-            subgraph Services["Services"]
-                SVC_FE["🌍 frontend Service<br/>Type: LoadBalancer<br/>Port: 80"]
-                SVC_BE["🔗 backend Service<br/>Type: ClusterIP<br/>Port: 3000"]
-                SVC_PG["🗄️ postgres Service<br/>Type: ClusterIP<br/>Port: 5432"]
-            end
-            
-            subgraph PersistentStorage["💿 Persistent Storage"]
-                PVC["PersistentVolumeClaim<br/>postgres-storage"]
-                PV["PersistentVolume<br/>10Gi ReadWriteOnce"]
-            end
-            
-            K8S_FE --> SVC_FE
-            K8S_BE1 --> SVC_BE
-            K8S_BE2 --> SVC_BE
-            K8S_BE3 --> SVC_BE
-            K8S_PG --> SVC_PG
-            
-            SVC_FE -->|"API Calls"| SVC_BE
-            SVC_BE -->|"DB Queries"| SVC_PG
-            
-            K8S_PG -.->|"Mount"| PVC
-            PVC -.->|"Bound"| PV
-            
-            SVC_BE -->|"Scrape /metrics"| K8S_PROM
-            K8S_PROM -->|"Query"| K8S_GRAF
-        end
-        
-        subgraph HealthChecks["💚 Health Checks & Probes"]
-            LIVENESS["✅ Liveness Probe<br/>GET /health<br/>initialDelay: 30s"]
-            READINESS["🔍 Readiness Probe<br/>GET /health<br/>initialDelay: 5s"]
-        end
-        
-        K8S_BE1 -.->|"Monitored by"| LIVENESS
-        K8S_BE1 -.->|"Monitored by"| READINESS
-        
-        INTERNET["🌐 Internet"] -->|"HTTP/HTTPS"| SVC_FE
-    end
-    
-    subgraph SecretsManagement["🔐 Secrets Management"]
-        SEC_PG["postgres-secret<br/>POSTGRES_USER<br/>POSTGRES_PASSWORD"]
-        SEC_BE["backend-secret<br/>DB_PASSWORD<br/>JWT_SECRET"]
-    end
-    
-    K8S_PG -.->|"Uses"| SEC_PG
-    K8S_BE1 -.->|"Uses"| SEC_BE
-    K8S_BE2 -.->|"Uses"| SEC_BE
-    K8S_BE3 -.->|"Uses"| SEC_BE
-    
-    classDef frontendStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
-    classDef backendStyle fill:#e8f5e9,stroke:#43a047,stroke-width:2px,color:#000
-    classDef dataStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    classDef monitoringStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
-    classDef serviceStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
-    classDef internetStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
-    classDef volumeStyle fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
-    classDef secretStyle fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000
-    classDef healthStyle fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#000
-    
-    class DC_FE,K8S_FE frontendStyle
-    class DC_BE,K8S_BE1,K8S_BE2,K8S_BE3 backendStyle
-    class DC_PG,K8S_PG dataStyle
-    class DC_PROM,DC_GRAF,K8S_PROM,K8S_GRAF monitoringStyle
-    class SVC_FE,SVC_BE,SVC_PG serviceStyle
-    class INTERNET internetStyle
-    class VOL_PG,VOL_PROM,VOL_GRAF,PVC,PV volumeStyle
-    class SEC_PG,SEC_BE secretStyle
-    class LIVENESS,READINESS healthStyle
-```
-
-### Diagram Explanations
-
-#### Diagram 1: System Architecture & Data Flow
-**Purpose**: Shows the complete system architecture and how data flows between components
-
-**Key Features**:
-- 👤 **User interaction layer** - Web browser accessing the application
-- 🖥️ **Frontend SPA** - React + TypeScript served by Nginx
-- ⚙️ **Backend API** - Express server with layered architecture (Routes → Controller → Services)
-- 💾 **Database schema** - PostgreSQL with urls and clicks tables
-- 📡 **Monitoring stack** - Prometheus collecting metrics, Grafana visualizing
-- 📊 **Metrics collection path** - Backend exposes /api/metrics endpoint for Prometheus scraping
-
-**Data Flow**:
-1. User sends HTTP/HTTPS requests to Nginx
-2. Nginx forwards API calls to Express backend
-3. Backend processes requests through controller and service layers
-4. Service layer performs database operations
-5. Metrics are recorded and exposed for Prometheus
-6. Grafana queries Prometheus for dashboard visualization
-
----
-
-#### Diagram 2: CI/CD Pipeline & Deployment Flow
-**Purpose**: Illustrates the complete DevOps workflow from code commit to production deployment
-
-**Key Features**:
-- 💻 **Development workflow** - Developer pushes code to Git repository
-- 🔄 **GitHub Actions** - Automated workflow triggered on push to main branch
-- 🏗️ **Build stage** - Docker Buildx builds backend and frontend images
-- 📤 **Push stage** - Images tagged with `latest` and commit SHA, pushed to Docker Hub
-- 📦 **Container registry** - Docker Hub stores versioned images
-- ☸️ **Kubernetes deployment** - kubectl applies manifests to cluster
-- 📊 **Auto-scaling** - HPA manages 2-10 backend replicas based on CPU/memory
-- 🌍 **External access** - LoadBalancer service exposes frontend to end users
-
-**Pipeline Flow**:
-1. Developer commits and pushes code changes
-2. GitHub webhook triggers Actions workflow
-3. Workflow checks out code and sets up Docker Buildx
-4. Logs into Docker Hub using secrets
-5. Builds backend and frontend images in parallel
-6. Tags images with both `latest` and git commit SHA
-7. Pushes images to Docker Hub registry
-8. Applies Kubernetes manifests to deploy new versions
-9. LoadBalancer routes external traffic to application
-
----
-
-#### Diagram 3: Docker & Kubernetes Infrastructure
-**Purpose**: Compares development (Docker Compose) vs production (Kubernetes) infrastructure
-
-**Development Environment Features** (Docker Compose):
-- 🐳 **app-network** - Bridge network connecting frontend, backend, and PostgreSQL
-- 📡 **monitoring network** - Separate network for Prometheus and Grafana
-- 💿 **Volume persistence** - Named volumes for database and monitoring data
-- 🌐 **Port mapping** - Exposed ports: 3001 (frontend), 3000 (backend), 5432 (postgres), 9090 (prometheus), 3002 (grafana)
-
-**Production Environment Features** (Kubernetes):
-- ☸️ **Namespace isolation** - All resources in `url-shortener` namespace
-- 🚀 **Pod architecture** - Frontend (1 replica), Backend (3 replicas with HPA), PostgreSQL (StatefulSet)
-- 🔗 **Service types** - ClusterIP for internal communication, LoadBalancer for external access
-- 💾 **Persistent storage** - PersistentVolumeClaim (10Gi) bound to PersistentVolume for database
-- 💚 **Health checks** - Liveness probe (30s delay) and Readiness probe (5s delay) for backend pods
-- 🔐 **Secrets management** - Kubernetes secrets for database and backend credentials
-- 📊 **Horizontal scaling** - HPA auto-scales backend from 2-10 replicas based on metrics
-
-**Key Differences**:
-- Development uses simple Docker networks; Production uses Kubernetes Services
-- Development has single containers; Production has multiple replicas with load balancing
-- Development uses Docker volumes; Production uses PersistentVolumeClaims
-- Production includes health probes, resource limits, and auto-scaling
-
----
-
-
 ### System Components
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         User Layer                          │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Frontend (React + TypeScript + Nginx)                      │
-│  Port: 3001 (Docker) / 80 (K8s LoadBalancer)               │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Backend (Node.js + Express + TypeScript)                   │
-│  Port: 3000                                                  │
-│  Features:                                                   │
-│  - URL Shortening Logic                                      │
-│  - Redirect Service                                          │
-│  - Prometheus Metrics Endpoint                               │
-│  - Health Checks                                             │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                    ┌─────────┴─────────┐
-                    ▼                   ▼
-        ┌──────────────────┐  ┌──────────────────┐
-        │   PostgreSQL     │  │   Prometheus     │
-        │   Port: 5432     │  │   Port: 9090     │
-        │   - urls table   │  │   - Metrics DB   │
-        │   - clicks table │  │   - Scrape Jobs  │
-        └──────────────────┘  └──────────────────┘
-                                        │
-                                        ▼
-                              ┌──────────────────┐
-                              │     Grafana      │
-                              │   Port: 3002     │
-                              │   - Dashboards   │
-                              │   - Alerts       │
-                              └──────────────────┘
-```
+The application consists of five main layers:
 
-### Network Architecture
+**1. User Layer**
+- Web browser interface for end users
+- Responsive design supporting desktop and mobile devices
 
-**Docker Compose:**
-- `app-network` (bridge): Frontend ↔ Backend ↔ PostgreSQL
-- `monitoring` (bridge): Backend ↔ Prometheus ↔ Grafana
+**2. Frontend Layer (Port 3001/80)**
+- React 18 with TypeScript for type safety
+- Nginx serving static assets in production
+- Reverse proxy configuration for API calls
+- Client-side routing with React Router
 
-**Kubernetes:**
-- `url-shortener` namespace
-- Services with ClusterIP (internal) and LoadBalancer (external)
-- Network Policies for pod-to-pod communication
+**3. Backend Layer (Port 3000)**
+- Node.js 18 with Express framework
+- RESTful API endpoints for URL operations
+- Prometheus metrics instrumentation
+- Health check endpoints for orchestration
+- Database connection pooling
+
+**4. Data Layer (Port 5432)**
+- PostgreSQL 15 for persistent storage
+- Two main tables: urls and clicks
+- Indexed queries for performance
+- Transaction support for data consistency
+
+**5. Monitoring Stack**
+- Prometheus for metrics collection (Port 9090)
+- Grafana for visualization and alerting (Port 3002)
+- Custom dashboards for application metrics
+- Alert rules for critical conditions
+
+### Network Flow
+
+**Development (Docker Compose):**
+- `app-network`: Connects frontend, backend, and PostgreSQL
+- `monitoring`: Links backend to Prometheus and Grafana
+- All services communicate via container DNS
+
+**Production (Kubernetes):**
+- Services expose endpoints via ClusterIP for internal traffic
+- LoadBalancer service provides external access to frontend
+- Network policies control pod-to-pod communication
+- All resources isolated in `url-shortener` namespace
 
 ---
 
-## 🛠️ DevOps Stack
+## Technology Stack
 
-### Containerization
-- **Docker**: Multi-stage builds for optimized images
-- **Docker Compose**: Local development orchestration
-- **Alpine Linux**: Base images for minimal footprint
+### Core Technologies
 
-### Orchestration
-- **Kubernetes**: Production deployment
-- **kubectl**: Cluster management
-- **StatefulSets**: For PostgreSQL persistence
-- **Deployments**: For stateless services
+**Backend:**
+- Node.js 18 (LTS)
+- Express 4.x
+- TypeScript 5.x
+- PostgreSQL 15
+- node-postgres (pg) for database connectivity
 
-### Monitoring & Observability
-- **Prometheus**: Metrics collection and storage
-- **Grafana**: Visualization and alerting
-- **Custom Metrics**: Application-level instrumentation
-- **Health Checks**: Liveness and readiness probes
+**Frontend:**
+- React 18
+- TypeScript 5.x
+- Vite (build tool)
+- Tailwind CSS for styling
+- React Router for navigation
 
-### CI/CD
-- **GitHub Actions**: Automated build and deploy
-- **Docker Hub**: Container registry
-- **Automated Testing**: Pre-deployment validation
+### DevOps Tools
 
-### Infrastructure as Code
-- **docker-compose.yml**: Development environment
-- **Kubernetes Manifests**: Production deployment
-- **Prometheus Config**: Monitoring setup
-- **Grafana Provisioning**: Dashboard automation
+**Containerization:**
+- Docker 20.10+
+- Docker Compose 2.0+
+- Multi-stage builds for optimization
+
+**Orchestration:**
+- Kubernetes 1.24+
+- Kind (Kubernetes in Docker) for local development
+- kubectl for cluster management
+
+**Monitoring:**
+- Prometheus 2.x for metrics
+- Grafana 9.x for dashboards
+- prom-client library for instrumentation
+
+**CI/CD:**
+- GitHub Actions for automation
+- Docker Hub as container registry
+- Automated testing and deployment
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Depi-url-short/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml              # CI/CD pipeline
-│
-├── backend/
-│   ├── Dockerfile                  # Multi-stage backend build
+├── backend/                        # Backend service
 │   ├── src/
-│   │   ├── app.ts                  # Express application
-│   │   ├── server.ts               # Server entry point
-│   │   ├── controllers/
-│   │   │   └── urlController.ts    # URL CRUD operations
-│   │   ├── middleware/
-│   │   │   └── metrics.ts          # Prometheus middleware
-│   │   ├── services/
-│   │   │   ├── metrics.ts          # Metrics service
-│   │   │   └── shortener.ts        # URL shortening logic
-│   │   ├── models/
-│   │   │   └── url.ts              # Database models
-│   │   ├── db/
-│   │   │   └── index.ts            # PostgreSQL connection pool
-│   │   └── routes/
-│   │       └── index.ts            # API routes
-│   ├── migrations/
-│   │   ├── init.sql                # Database schema
-│   │   └── add_clicks_table.sql    # Click tracking
-│   └── tests/
-│       └── url.test.ts             # Unit tests
+│   │   ├── app.ts                  # Express app configuration
+│   │   ├── server.ts               # Entry point
+│   │   ├── controllers/            # Request handlers
+│   │   │   └── urlController.ts
+│   │   ├── services/               # Business logic
+│   │   │   ├── metrics.ts          # Prometheus metrics
+│   │   │   └── shortener.ts        # URL shortening
+│   │   ├── models/                 # Data models
+│   │   │   └── url.ts
+│   │   ├── db/                     # Database connection
+│   │   │   └── index.ts
+│   │   └── routes/                 # API routes
+│   │       └── index.ts
+│   ├── migrations/                 # Database schemas
+│   │   ├── init.sql
+│   │   └── add_clicks_table.sql
+│   ├── Dockerfile                  # Multi-stage build
+│   ├── package.json
+│   └── tsconfig.json
 │
-├── frontend/
-│   ├── Dockerfile                  # Multi-stage frontend build
+├── frontend/                       # Frontend service
+│   ├── src/
+│   │   ├── App.tsx                 # Main component
+│   │   ├── components/             # React components
+│   │   │   ├── UrlShortener.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── UrlsTable.tsx
+│   │   │   └── QRCodeModal.tsx
+│   │   └── services/               # API client
+│   │       └── api.ts
 │   ├── nginx.conf                  # Production server config
-│   ├── src/
-│   │   ├── App.tsx                 # Main React component
-│   │   ├── components/
-│   │   │   ├── UrlShortener.tsx    # URL creation form
-│   │   │   ├── Dashboard.tsx       # Metrics dashboard
-│   │   │   ├── MetricsCard.tsx     # Metric display
-│   │   │   ├── QRCodeModal.tsx     # QR code generator
-│   │   │   └── Statistics.tsx      # Stats visualization
-│   │   └── services/
-│   │       └── api.ts              # Backend API client
-│   └── public/
-│       └── favicon.ico
+│   ├── Dockerfile                  # Multi-stage build
+│   └── package.json
 │
-├── kubernetes/
-│   ├── url-shortener.yml           # Namespace definition
-│   ├── postgres.yml                # StatefulSet + PVC + Service
-│   ├── backend.yml                 # Backend Deployment + Service
-│   ├── frontend.yml                # Frontend Deployment + LoadBalancer
-│   └── monitoring.yml              # Prometheus + Grafana stack
+├── kubernetes/                     # K8s manifests
+│   ├── url-shortener.yml           # Namespace
+│   ├── postgres.yml                # Database StatefulSet
+│   ├── backend.yml                 # Backend Deployment
+│   ├── backend-local.yml           # Local Kind variant
+│   ├── frontend.yml                # Frontend Deployment
+│   ├── frontend-local.yml          # Local Kind variant
+│   └── monitoring.yml              # Prometheus + Grafana
 │
-├── monitoring/
-│   ├── prometheus.yml              # Prometheus configuration
+├── monitoring/                     # Monitoring configs
+│   ├── prometheus.yml              # Scrape configs
 │   └── grafana/
 │       ├── provisioning/
 │       │   ├── datasources/
-│       │   │   └── datasource.yml  # Prometheus datasource
-│       │   ├── dashboards/
-│       │   │   └── dashboards.yml  # Dashboard provisioning
-│       │   └── alerting/
-│       │       └── alerts.yml      # Alert rules
+│       │   └── dashboards/
 │       └── dashboards/
 │           └── url_shortener_dashboard.json
 │
-├── docker-compose.yml              # Local development stack
-├── README.md                       # User documentation
-└── DEV_README.md                   # This file
+├── .github/workflows/              # CI/CD pipelines
+│   └── kube.yml                    # Deployment workflow
+│
+├── docker-compose.yml              # Local development
+├── deploy-local-kind.sh            # Kind deployment script
+├── tmux-port-forward.sh            # Port forwarding helper
+├── install-kind.sh                 # Kind installer
+└── README.md                       # User documentation
 ```
 
 ---
 
-## Quick Start
+## Getting Started
 
 ### Prerequisites
 
+Before you begin, ensure you have the following installed:
+
+**Required:**
+- Docker 20.10 or higher
+- Docker Compose 2.0 or higher
+- Git for version control
+- curl or wget for downloads
+
+**For Kubernetes (optional):**
+- kubectl 1.24+
+- Kind 0.20+ (or use our install script)
+
+**For local development (optional):**
+- Node.js 18+
+- npm 9+
+
+### Verifying Prerequisites
+
 ```bash
-# Required tools
-docker --version          # Docker 20.10+
-docker-compose --version  # Docker Compose 2.0+
-kubectl version          # Kubernetes 1.24+
-node --version           # Node.js 18+
-npm --version            # npm 9+
+# Check Docker
+docker --version
+docker-compose --version
+
+# Check Kubernetes tools (if using K8s)
+kubectl version --client
+kind version
+
+# Check Node.js (if developing locally)
+node --version
+npm --version
 ```
 
-### Local Development with Docker Compose
+---
+
+## Installation Methods
+
+You have three options for running this project:
+
+1. **Docker Compose** - Recommended for development and testing
+2. **Local Kubernetes (Kind)** - For testing Kubernetes deployments
+3. **Production Kubernetes** - For actual production deployments
+
+---
+
+## Running with Docker Compose
+
+This is the easiest way to get started. Docker Compose will orchestrate all services with proper networking and dependencies.
+
+### Step 1: Clone the Repository
 
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
+git clone https://github.com/your-org/Depi-url-short.git
 cd Depi-url-short
+```
 
-# 2. Create environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+### Step 2: Configure Environment Variables
 
-# 3. Configure backend/.env
-cat > backend/.env << EOF
-NODE_ENV=development
+Create environment files for backend and frontend:
+
+```bash
+# Backend configuration
+cat > backend/.env << 'EOF'
+NODE_ENV=production
 PORT=3000
 DB_HOST=postgres
 DB_PORT=5432
@@ -591,86 +343,238 @@ DB_PASSWORD=urlshortener123
 BASE_URL=http://localhost:3000
 EOF
 
-# 4. Configure frontend/.env
-cat > frontend/.env << EOF
+# Frontend configuration
+cat > frontend/.env << 'EOF'
 VITE_API_URL=http://localhost:3000
 EOF
+```
 
-# 5. Start all services
-docker-compose up --build
+### Step 3: Start All Services
 
-# 6. Verify services are healthy
+```bash
+# Build and start all containers
+docker-compose up --build -d
+
+# This will start:
+# - PostgreSQL database
+# - Backend API server
+# - Frontend web server
+# - Prometheus metrics collector
+# - Grafana dashboard
+```
+
+### Step 4: Verify Services
+
+```bash
+# Check all containers are running
 docker-compose ps
 
 # Expected output:
 # NAME                    STATUS              PORTS
-# url-shortener-postgres  Up (healthy)        0.0.0.0:5432->5432/tcp
-# url-shortener-backend   Up (healthy)        0.0.0.0:3000->3000/tcp
-# url-shortener-frontend  Up                  0.0.0.0:3001->80/tcp
-# prometheus              Up                  0.0.0.0:9090->9090/tcp
-# grafana                 Up                  0.0.0.0:3002->3000/tcp
+# url-shortener-postgres  Up (healthy)        5432
+# url-shortener-backend   Up (healthy)        3000
+# url-shortener-frontend  Up                  80
+# prometheus              Up                  9090
+# grafana                 Up                  3000
 ```
 
-### Access the Application
+### Step 5: Access the Application
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Frontend | http://localhost:3001 | - |
-| Backend API | http://localhost:3000 | - |
-| Prometheus | http://localhost:9090 | - |
-| Grafana | http://localhost:3002 | admin / admin |
-| PostgreSQL | localhost:5432 | urlshortener / urlshortener123 |
+Open your browser and navigate to:
 
-### Run Database Migrations
+- **Frontend:** http://localhost:3001
+- **Backend API:** http://localhost:3000/health
+- **Prometheus:** http://localhost:9090
+- **Grafana:** http://localhost:3002 (login: admin/admin)
+
+### Step 6: Initialize Database (First Time Only)
+
+The database schema is automatically created on first run. To verify:
 
 ```bash
-# Access the PostgreSQL container
+# Connect to PostgreSQL
 docker exec -it url-shortener-postgres psql -U urlshortener -d urlshortener
 
-# Manually run migrations (if not auto-applied)
-docker exec -i url-shortener-postgres psql -U urlshortener -d urlshortener < backend/migrations/init.sql
-docker exec -i url-shortener-postgres psql -U urlshortener -d urlshortener < backend/migrations/add_clicks_table.sql
+# List tables
+\dt
+
+# Expected tables:
+#  public | clicks | table | urlshortener
+#  public | urls   | table | urlshortener
+
+# Exit
+\q
+```
+
+### Managing Docker Compose
+
+```bash
+# View logs for all services
+docker-compose logs -f
+
+# View logs for specific service
+docker-compose logs -f backend
+
+# Restart a service
+docker-compose restart backend
+
+# Stop all services
+docker-compose down
+
+# Stop and remove all data (fresh start)
+docker-compose down -v
 ```
 
 ---
 
-## Development Workflow
+## Running on Kubernetes (Kind)
+
+For those who want to test Kubernetes deployments locally, we provide scripts to automate the process using Kind (Kubernetes in Docker).
+
+### Step 1: Install Kind
+
+We provide an installation script that works on Linux, macOS, and Windows (Git Bash):
+
+```bash
+# Make the script executable
+chmod +x install-kind.sh
+
+# Run the installer
+./install-kind.sh
+
+# Verify installation
+kind version
+```
+
+Manual installation alternative:
+
+```bash
+# Linux
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+
+# macOS
+brew install kind
+
+# Windows (PowerShell)
+curl.exe -Lo kind-windows-amd64.exe https://kind.sigs.k8s.io/dl/v0.20.0/kind-windows-amd64
+Move-Item .\kind-windows-amd64.exe c:\some-dir-in-your-PATH\kind.exe
+```
+
+### Step 2: Deploy to Kind
+
+Use our automated deployment script:
+
+```bash
+# Make script executable
+chmod +x deploy-local-kind.sh
+
+# Deploy everything
+./deploy-local-kind.sh
+```
+
+The script will:
+1. Create a Kind cluster named "url-shortener"
+2. Build Docker images for backend and frontend
+3. Load images into the Kind cluster
+4. Deploy PostgreSQL and wait for it to be ready
+5. Deploy backend and wait for it to be ready
+6. Deploy frontend
+7. Deploy monitoring stack (Prometheus + Grafana)
+
+### Step 3: Setup Port Forwarding
+
+Since Kind runs inside Docker, you need to forward ports to access services:
+
+```bash
+# Using our tmux script (recommended)
+chmod +x tmux-port-forward.sh
+./tmux-port-forward.sh
+
+# Or manually forward each service
+kubectl port-forward -n url-shortener svc/frontend 3001:80 &
+kubectl port-forward -n url-shortener svc/backend 3000:3000 &
+kubectl port-forward -n url-shortener svc/grafana 3002:3000 &
+kubectl port-forward -n url-shortener svc/prometheus 9090:9090 &
+```
+
+### Step 4: Access Services
+
+After port forwarding is active:
+
+- **Frontend:** http://localhost:3001
+- **Backend:** http://localhost:3000
+- **Grafana:** http://localhost:3002
+- **Prometheus:** http://localhost:9090
+
+### Step 5: Monitor Deployment
+
+```bash
+# Watch pods come online
+kubectl get pods -n url-shortener -w
+
+# Check service endpoints
+kubectl get svc -n url-shortener
+
+# View deployment status
+kubectl get deployments -n url-shortener
+
+# Check logs
+kubectl logs -n url-shortener -l app=backend -f
+kubectl logs -n url-shortener -l app=frontend -f
+```
+
+### Cleanup Kind Cluster
+
+```bash
+# Delete the entire cluster
+kind delete cluster --name url-shortener
+
+# This removes all resources and volumes
+```
+
+---
+
+## Development Guide
 
 ### Backend Development
 
+Working directly with the backend code:
+
 ```bash
-# Navigate to backend
 cd backend
 
 # Install dependencies
 npm install
 
-# Run in development mode (with hot reload)
+# Run in development mode (hot reload)
 npm run dev
 
 # Run tests
 npm test
 
+# Type checking
+npm run type-check
+
 # Build TypeScript
 npm run build
 
-# Run linter
-npm run lint
-
-# Format code
-npm run format
+# Run production build
+npm start
 ```
 
 ### Frontend Development
 
+Working with the React frontend:
+
 ```bash
-# Navigate to frontend
 cd frontend
 
 # Install dependencies
 npm install
 
-# Run development server (Vite)
+# Start Vite dev server (hot reload)
 npm run dev
 
 # Build for production
@@ -679,30 +583,35 @@ npm run build
 # Preview production build
 npm run preview
 
-# Run linter
-npm run lint
+# Type checking
+npm run type-check
 ```
 
-### Docker Development
+### Database Management
+
+Direct database access for development:
 
 ```bash
-# Build specific service
-docker-compose build backend
+# Using Docker Compose
+docker exec -it url-shortener-postgres psql -U urlshortener -d urlshortener
 
-# Restart a service
-docker-compose restart backend
+# Using Kubernetes
+kubectl exec -it postgres-0 -n url-shortener -- psql -U urlshortener -d urlshortener
 
-# View logs
-docker-compose logs -f backend
+# Common queries
+SELECT * FROM urls;
+SELECT * FROM clicks WHERE url_id = 1;
+SELECT COUNT(*) FROM urls;
+```
 
-# Execute commands in running container
-docker exec -it url-shortener-backend sh
+### Running Migrations
 
-# Stop all services
-docker-compose down
+```bash
+# Docker Compose
+docker exec -i url-shortener-postgres psql -U urlshortener -d urlshortener < backend/migrations/init.sql
 
-# Stop and remove volumes (clean slate)
-docker-compose down -v
+# Kubernetes
+kubectl exec -i postgres-0 -n url-shortener -- psql -U urlshortener -d urlshortener < backend/migrations/init.sql
 ```
 
 ---
@@ -711,46 +620,49 @@ docker-compose down -v
 
 ### Multi-Stage Backend Dockerfile
 
-```dockerfile
-# Stage 1: Builder
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-# Stage 2: Runner
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/migrations ./migrations
-RUN apk add --no-cache wget
-EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
-CMD ["node", "dist/server.js"]
-```
-
-**Benefits:**
-- **90% size reduction**: Build dependencies not in production image
-- **Security**: No build tools in final image
-- **Performance**: Optimized layers for caching
-
-### Multi-Stage Frontend Dockerfile
+Our backend uses a two-stage build process:
 
 ```dockerfile
 # Stage 1: Build
-FROM node:18-alpine AS build
-WORKDIR /app
+FROM node:20-alpine AS builder
+WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 RUN npm run build
 
 # Stage 2: Production
+FROM node:20-alpine AS runner
+RUN apk add --no-cache curl
+WORKDIR /usr/src/app
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/package*.json ./
+RUN npm install --omit=dev
+ENV NODE_ENV=production
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+```
+
+Benefits:
+- Build dependencies excluded from final image
+- Smaller image size (approximately 150MB vs 1GB+)
+- Better security (no build tools in production)
+- Faster deployment and startup
+
+### Multi-Stage Frontend Dockerfile
+
+The frontend build optimizes for static serving:
+
+```dockerfile
+# Stage 1: Build React app
+FROM node:18-alpine as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve with Nginx
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -758,350 +670,178 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-**Benefits:**
-- **Tiny image**: ~80MB vs ~1.2GB with Node.js
-- **Production-ready**: Nginx serves static files efficiently
-- **SPA support**: Configured for React Router
+Benefits:
+- Final image only 25MB
+- Nginx handles static files efficiently
+- Production-optimized configuration
+- Support for React Router
 
-### Docker Compose Services
+### Docker Compose Configuration
 
-#### PostgreSQL with Health Checks
+Key aspects of our docker-compose.yml:
 
-```yaml
-postgres:
-  image: postgres:15-alpine
-  environment:
-    POSTGRES_USER: urlshortener
-    POSTGRES_PASSWORD: urlshortener123
-    POSTGRES_DB: urlshortener
-    PGDATA: /var/lib/postgresql/data/pgdata
-  volumes:
-    - postgres_data:/var/lib/postgresql/data
-  healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U urlshortener -d urlshortener"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-  restart: unless-stopped
-```
-
-#### Backend with Dependencies
+**Health Checks:**
+All services have health checks to ensure proper startup order:
 
 ```yaml
-backend:
-  build:
-    context: ./backend
-    dockerfile: Dockerfile
-  depends_on:
-    postgres:
-      condition: service_healthy  # Wait for DB to be ready
-  environment:
-    NODE_ENV: production
-    DB_HOST: postgres  # Docker DNS resolution
-  healthcheck:
-    test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-  networks:
-    - app-network
-    - monitoring  # Access to Prometheus
+healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U urlshortener"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
 ```
+
+**Dependency Management:**
+Backend waits for database to be healthy:
+
+```yaml
+depends_on:
+  postgres:
+    condition: service_healthy
+```
+
+**Networking:**
+Two isolated networks for security:
+- `app-network` - Application services
+- `monitoring` - Metrics collection
+
+**Volumes:**
+Persistent storage for data:
+- `postgres_data` - Database files
+- `prometheus_data` - Metrics storage
+- `grafana_data` - Dashboard configs
 
 ---
 
 ## Kubernetes Deployment
 
-### Prerequisites
+### Architecture Decisions
+
+**StatefulSet for PostgreSQL:**
+We use StatefulSet instead of Deployment for the database to ensure:
+- Stable network identity
+- Persistent storage that follows the pod
+- Ordered deployment and scaling
+- Automatic volume claim management
+
+**Deployments for Stateless Services:**
+Backend and frontend use Deployments for:
+- Easy horizontal scaling
+- Rolling updates
+- Self-healing capabilities
+- Load balancing
+
+**Service Types:**
+- ClusterIP: Internal services (backend, database)
+- LoadBalancer: External access (frontend)
+
+### Resource Management
+
+All deployments include resource requests and limits:
+
+```yaml
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+```
+
+This ensures:
+- Guaranteed minimum resources
+- Prevention of resource overconsumption
+- Better scheduling decisions
+- Pod eviction protection
+
+### Health Probes
+
+**Liveness Probe:**
+Detects if the application is deadlocked and needs restart:
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  failureThreshold: 3
+```
+
+**Readiness Probe:**
+Determines when pod can receive traffic:
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+```
+
+### Secrets Management
+
+PostgreSQL credentials stored as Kubernetes secrets:
 
 ```bash
-# Verify Kubernetes cluster is running
-kubectl cluster-info
-
-# Create namespace
-kubectl apply -f kubernetes/url-shortener.yml
-
-# Verify namespace
-kubectl get namespaces
+kubectl create secret generic postgres-secret \
+  --from-literal=POSTGRES_USER=urlshortener \
+  --from-literal=POSTGRES_PASSWORD=your-secure-password \
+  -n url-shortener
 ```
 
-### Deploy All Services
-
-```bash
-# Apply all manifests
-kubectl apply -f kubernetes/
-
-# Verify deployments
-kubectl get all -n url-shortener
-
-# Expected output:
-# NAME                            READY   STATUS    RESTARTS   AGE
-# pod/backend-xxx                 1/1     Running   0          2m
-# pod/frontend-xxx                1/1     Running   0          2m
-# pod/postgres-0                  1/1     Running   0          2m
-# pod/prometheus-xxx              1/1     Running   0          2m
-# pod/grafana-xxx                 1/1     Running   0          2m
-```
-
-### PostgreSQL StatefulSet
+Referenced in deployments:
 
 ```yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: postgres
-  namespace: url-shortener
-spec:
-  serviceName: postgres
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        env:
-        - name: POSTGRES_DB
-          value: urlshortener
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_PASSWORD
-        ports:
-        - containerPort: 5432
-        volumeMounts:
-        - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
-  volumeClaimTemplates:
-  - metadata:
-      name: postgres-storage
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi
-```
-
-### Backend Deployment with Resources
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: backend
-  namespace: url-shortener
-spec:
-  replicas: 3  # Horizontal scaling
-  selector:
-    matchLabels:
-      app: backend
-  template:
-    metadata:
-      labels:
-        app: backend
-    spec:
-      containers:
-      - name: backend
-        image: your-dockerhub/url-shortener-backend:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: DB_HOST
-          value: postgres
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_PASSWORD
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-```
-
-### Frontend LoadBalancer Service
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend
-  namespace: url-shortener
-spec:
-  type: LoadBalancer  # External access
-  selector:
-    app: frontend
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 80
+env:
+- name: DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: postgres-secret
+      key: POSTGRES_PASSWORD
 ```
 
 ### Useful Kubernetes Commands
 
 ```bash
-# Get all resources in namespace
-kubectl get all -n url-shortener
+# Deploy all manifests
+kubectl apply -f kubernetes/
 
-# Describe a pod
-kubectl describe pod <pod-name> -n url-shortener
+# Watch deployment progress
+kubectl get pods -n url-shortener -w
+
+# Check service endpoints
+kubectl get svc -n url-shortener
+
+# Scale backend
+kubectl scale deployment backend --replicas=3 -n url-shortener
 
 # View logs
-kubectl logs -f <pod-name> -n url-shortener
+kubectl logs -f deployment/backend -n url-shortener
 
-# Execute command in pod
-kubectl exec -it <pod-name> -n url-shortener -- sh
+# Execute commands in pod
+kubectl exec -it deployment/backend -n url-shortener -- sh
 
-# Scale deployment
-kubectl scale deployment backend --replicas=5 -n url-shortener
-
-# Get service external IP
-kubectl get svc frontend -n url-shortener
-
-# Port forward for local access
+# Port forward for local testing
 kubectl port-forward svc/backend 3000:3000 -n url-shortener
 
-# Delete all resources in namespace
+# Delete all resources
 kubectl delete namespace url-shortener
 ```
 
 ---
 
-## Monitoring & Observability
-
-### Custom Prometheus Metrics
-
-#### Metrics Service Implementation
-
-```typescript
-// backend/src/services/metrics.ts
-import { Counter, Histogram, Gauge, register } from 'prom-client';
-
-class MetricsService {
-  private urlsCreatedCounter: Counter;
-  private redirectsCounter: Counter;
-  private failedLookupsCounter: Counter;
-  private requestLatencyHistogram: Histogram;
-  private totalUrlsGauge: Gauge;
-
-  constructor() {
-    // Counter: URLs shortened
-    this.urlsCreatedCounter = new Counter({
-      name: 'urls_shortened_total',
-      help: 'Total number of URLs shortened',
-    });
-
-    // Counter: Successful redirects
-    this.redirectsCounter = new Counter({
-      name: 'successful_redirects_total',
-      help: 'Total number of successful URL redirects',
-    });
-
-    // Counter: Failed lookups (404s)
-    this.failedLookupsCounter = new Counter({
-      name: 'failed_lookups_total',
-      help: 'Total number of failed URL lookups',
-    });
-
-    // Histogram: Request latency
-    this.requestLatencyHistogram = new Histogram({
-      name: 'request_latency_ms',
-      help: 'Request latency in milliseconds',
-      buckets: [10, 50, 100, 200, 500, 1000],
-    });
-
-    // Gauge: Total URLs in database
-    this.totalUrlsGauge = new Gauge({
-      name: 'total_urls',
-      help: 'Total number of URLs in the database',
-    });
-  }
-
-  recordUrlCreated(): void {
-    this.urlsCreatedCounter.inc();
-  }
-
-  recordRedirect(): void {
-    this.redirectsCounter.inc();
-  }
-
-  recordFailedLookup(): void {
-    this.failedLookupsCounter.inc();
-  }
-
-  recordLatency(latencyMs: number): void {
-    this.requestLatencyHistogram.observe(latencyMs);
-  }
-
-  setTotalUrls(count: number): void {
-    this.totalUrlsGauge.set(count);
-  }
-
-  getMetrics(): Promise<string> {
-    return register.metrics();
-  }
-}
-
-export const metricsService = new MetricsService();
-```
-
-#### Metrics Middleware
-
-```typescript
-// backend/src/middleware/metrics.ts
-import { Request, Response, NextFunction } from 'express';
-import { metricsService } from '../services/metrics';
-
-export const metricsMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const start = Date.now();
-
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    metricsService.recordLatency(duration);
-  });
-
-  next();
-};
-```
+## Monitoring Setup
 
 ### Prometheus Configuration
 
-```yaml
-# monitoring/prometheus.yml
-global:
-  scrape_interval: 5s
-  evaluation_interval: 5s
+Prometheus scrapes metrics from the backend every 5 seconds:
 
+```yaml
 scrape_configs:
   - job_name: 'url-shortener-backend'
     static_configs:
@@ -1110,69 +850,64 @@ scrape_configs:
     scrape_interval: 5s
 ```
 
-### Grafana Dashboard
+### Custom Metrics Implementation
 
-The dashboard is auto-provisioned and includes:
+The backend exposes several custom metrics:
 
-**Panels:**
-1. **URL Creations per Second** - Rate of new URLs
-   - Query: `rate(urls_shortened_total[1m])`
-   
-2. **Total URLs** - Single stat
-   - Query: `total_urls`
+**Counters:**
+- `urls_shortened_total` - Total URLs created
+- `successful_redirects_total` - Total successful redirects
+- `failed_lookups_total` - Total 404 errors
 
-3. **Successful Redirects** - Time series
-   - Query: `rate(successful_redirects_total[5m])`
+**Histograms:**
+- `request_latency_ms` - Request latency distribution
 
-4. **404 Error Rate** - Failed lookups
-   - Query: `rate(failed_lookups_total[1m])`
+**Gauges:**
+- `total_urls` - Current number of URLs in database
 
-5. **P95 Latency** - 95th percentile response time
-   - Query: `histogram_quantile(0.95, rate(request_latency_ms_bucket[5m]))`
+Example metric queries:
 
-6. **Average Latency** - Mean response time
-   - Query: `rate(request_latency_ms_sum[5m]) / rate(request_latency_ms_count[5m])`
+```promql
+# Rate of URL creation
+rate(urls_shortened_total[5m])
 
-**Alert Rules** (monitoring/grafana/provisioning/alerting/alerts.yml):
+# 95th percentile latency
+histogram_quantile(0.95, rate(request_latency_ms_bucket[5m]))
 
-```yaml
-groups:
-  - name: url_shortener_alerts
-    interval: 30s
-    rules:
-      - alert: HighErrorRate
-        expr: rate(failed_lookups_total[5m]) > 10
-        for: 2m
-        annotations:
-          summary: "High 404 error rate detected"
-          description: "Error rate is {{ $value }} errors/sec"
-
-      - alert: HighLatency
-        expr: histogram_quantile(0.95, rate(request_latency_ms_bucket[5m])) > 200
-        for: 5m
-        annotations:
-          summary: "High P95 latency detected"
-          description: "P95 latency is {{ $value }}ms"
-
-      - alert: ServiceDown
-        expr: up{job="url-shortener-backend"} == 0
-        for: 1m
-        annotations:
-          summary: "Backend service is down"
-          description: "Backend has been down for 1 minute"
+# Error rate
+rate(failed_lookups_total[5m])
 ```
 
-### Accessing Monitoring Stack
+### Grafana Dashboards
 
-```bash
-# Docker Compose
-http://localhost:9090  # Prometheus
-http://localhost:3002  # Grafana (admin/admin)
+The dashboard includes panels for:
 
-# Kubernetes
-kubectl port-forward svc/prometheus 9090:9090 -n url-shortener
-kubectl port-forward svc/grafana 3002:3000 -n url-shortener
-```
+1. **URL Creation Rate** - Real-time URL shortening activity
+2. **Total URLs** - Current count with trend
+3. **Redirect Success Rate** - Successful vs failed redirects
+4. **Latency Metrics** - Average, P95, P99 response times
+5. **Error Tracking** - 404 rates and patterns
+
+Access Grafana:
+- Docker Compose: http://localhost:3002
+- Kubernetes: Port forward then http://localhost:3002
+- Default credentials: admin/admin
+
+### Alert Rules
+
+Configured alerts for critical conditions:
+
+**High Error Rate:**
+- Triggers when 404 rate exceeds 10 per second
+- Sustained for 2 minutes
+
+**High Latency:**
+- Triggers when P95 latency exceeds 200ms
+- Sustained for 5 minutes
+
+**Service Down:**
+- Triggers when backend is unreachable
+- After 1 minute of downtime
 
 ---
 
@@ -1180,202 +915,189 @@ kubectl port-forward svc/grafana 3002:3000 -n url-shortener
 
 ### GitHub Actions Workflow
 
+The deployment pipeline runs on every push to main:
+
 ```yaml
-# .github/workflows/deploy.yml
-name: Build and Deploy
+name: Deploy to Kubernetes [Production]
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push backend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/url-shortener-backend:latest
-            ${{ secrets.DOCKER_USERNAME }}/url-shortener-backend:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/url-shortener-backend:latest
-          cache-to: type=inline
-
-      - name: Build and push frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/url-shortener-frontend:latest
-            ${{ secrets.DOCKER_USERNAME }}/url-shortener-frontend:${{ github.sha }}
+    # Builds Docker images
+    # Tags with latest and commit SHA
+    # Pushes to Docker Hub
 
   deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure kubectl
-        uses: azure/k8s-set-context@v3
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f kubernetes/
-          kubectl rollout status deployment/backend -n url-shortener
-          kubectl rollout status deployment/frontend -n url-shortener
-
-      - name: Verify deployment
-        run: |
-          kubectl get pods -n url-shortener
-          kubectl get svc -n url-shortener
-```
-
-### Required GitHub Secrets
-
-```bash
-DOCKER_USERNAME      # Docker Hub username
-DOCKER_PASSWORD      # Docker Hub password/token
-KUBE_CONFIG          # Kubernetes cluster config (base64 encoded)
+    # Updates Kubernetes manifests
+    # Applies to cluster
+    # Verifies rollout
 ```
 
 ### Pipeline Stages
 
-1. **Checkout**: Clone repository
-2. **Build**: Build Docker images with caching
-3. **Push**: Push to Docker Hub with tags (latest + commit SHA)
-4. **Deploy**: Apply Kubernetes manifests
-5. **Verify**: Check deployment status
+**1. Build Stage:**
+- Checkout code from repository
+- Setup Docker Buildx for efficient builds
+- Login to Docker Hub
+- Build backend and frontend images in parallel
+- Use layer caching to speed up builds
+
+**2. Push Stage:**
+- Tag images with both `latest` and commit SHA
+- Push to Docker Hub registry
+- SHA tags enable rollback to specific versions
+
+**3. Deploy Stage:**
+- Configure kubectl with cluster credentials
+- Update image tags in manifests
+- Apply manifests to Kubernetes
+- Wait for rollout to complete
+- Verify pod status
+
+### Required Secrets
+
+Configure these in GitHub repository settings:
+
+```bash
+DOCKER_USERNAME      # Docker Hub username
+DOCKER_PASSWORD      # Docker Hub access token
+KUBE_CONFIG          # Kubernetes config (base64 encoded)
+```
+
+### Manual Deployment
+
+For testing or emergency deployments:
+
+```bash
+# Build images
+docker build -t your-username/url-shortener-backend:test ./backend
+docker build -t your-username/url-shortener-frontend:test ./frontend
+
+# Push to registry
+docker push your-username/url-shortener-backend:test
+docker push your-username/url-shortener-frontend:test
+
+# Update Kubernetes
+kubectl set image deployment/backend backend=your-username/url-shortener-backend:test -n url-shortener
+kubectl set image deployment/frontend frontend=your-username/url-shortener-frontend:test -n url-shortener
+```
 
 ---
 
-## Security Best Practices
+## Security Practices
 
 ### Environment Variables
 
+Never commit sensitive data:
+
 ```bash
-# Never commit these files
-backend/.env
-frontend/.env
+# Add to .gitignore
+.env
 .env.local
 .env.production
+backend/.env
+frontend/.env
 ```
 
 ### Kubernetes Secrets
 
+Store credentials securely:
+
 ```bash
-# Create PostgreSQL secret
+# Create secrets from literals
 kubectl create secret generic postgres-secret \
   --from-literal=POSTGRES_USER=urlshortener \
-  --from-literal=POSTGRES_PASSWORD=secure-password-here \
+  --from-literal=POSTGRES_PASSWORD=secure-random-password \
   -n url-shortener
 
-# Create backend secrets
+# Or from file
 kubectl create secret generic backend-secret \
-  --from-literal=DB_PASSWORD=secure-password-here \
-  --from-literal=JWT_SECRET=your-jwt-secret \
+  --from-file=.env=backend/.env.production \
   -n url-shortener
 ```
 
-### Docker Security
+### Container Security
 
-```dockerfile
-# Use non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-USER nodejs
+Best practices implemented:
 
-# Scan for vulnerabilities
-docker scan your-image:latest
-```
+- Multi-stage builds reduce attack surface
+- Alpine base images for minimal footprint
+- Non-root users in containers
+- Health checks for automatic recovery
+- Resource limits prevent DoS
 
-### Network Policies
+### Network Security
+
+Network policies restrict traffic:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: backend-network-policy
-  namespace: url-shortener
+  name: backend-policy
 spec:
   podSelector:
     matchLabels:
       app: backend
   policyTypes:
   - Ingress
-  - Egress
   ingress:
   - from:
     - podSelector:
         matchLabels:
           app: frontend
-    ports:
-    - protocol: TCP
-      port: 3000
 ```
 
 ---
 
-## Performance & Scaling
+## Performance Optimization
 
-### Resource Optimization
+### Database Connection Pooling
 
-**Backend Resource Requests:**
-```yaml
-resources:
-  requests:
-    memory: "256Mi"
-    cpu: "250m"
-  limits:
-    memory: "512Mi"
-    cpu: "500m"
-```
+The backend uses connection pooling to manage database connections efficiently:
 
-**Database Connection Pooling:**
 ```typescript
-// backend/src/db/index.ts
 const pool = new Pool({
   max: 20,                    // Maximum connections
-  idleTimeoutMillis: 30000,   // Close idle connections
+  idleTimeoutMillis: 30000,   // Close idle connections after 30s
   connectionTimeoutMillis: 2000,
 });
 ```
 
-### Horizontal Pod Autoscaler
+### Caching Strategy
+
+Nginx caches static assets:
+
+```nginx
+location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+```
+
+### Database Indexing
+
+Indexes on frequently queried columns:
+
+```sql
+CREATE INDEX idx_urls_short_code ON urls(short_code);
+CREATE INDEX idx_clicks_url_id ON clicks(url_id);
+CREATE INDEX idx_clicks_timestamp ON clicks(clicked_at);
+```
+
+### Horizontal Scaling
+
+Auto-scaling based on CPU and memory:
 
 ```yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: backend-hpa
-  namespace: url-shortener
 spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: backend
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -1383,60 +1105,82 @@ spec:
     resource:
       name: cpu
       target:
-        type: Utilization
         averageUtilization: 70
   - type: Resource
     resource:
       name: memory
       target:
-        type: Utilization
         averageUtilization: 80
 ```
 
 ### Performance Benchmarks
 
-| Metric | Value |
-|--------|-------|
-| Average Response Time | < 50ms |
-| P95 Latency | < 100ms |
-| P99 Latency | < 200ms |
-| Throughput | 1000+ req/sec (single pod) |
-| Container Startup | ~5 seconds |
-| Database Query Time | < 10ms (indexed) |
+Typical performance metrics:
+
+| Metric | Target | Actual |
+|--------|--------|--------|
+| Average Response Time | < 50ms | ~30ms |
+| P95 Latency | < 100ms | ~80ms |
+| P99 Latency | < 200ms | ~150ms |
+| Throughput (single pod) | 500+ req/s | ~800 req/s |
+| Container Startup | < 10s | ~5s |
+| Database Query Time | < 10ms | ~5ms |
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues and Solutions
 
-#### 1. Backend Can't Connect to Database
+**1. Backend Cannot Connect to Database**
+
+Symptoms: Backend logs show connection errors
 
 ```bash
-# Check database is healthy
+# Check if PostgreSQL is running
 docker-compose ps postgres
+kubectl get pods -n url-shortener | grep postgres
 
-# Check health check logs
+# Verify health check
 docker-compose logs postgres | grep "ready"
 
-# Verify network connectivity
+# Test network connectivity
 docker-compose exec backend ping postgres
+kubectl exec deployment/backend -n url-shortener -- nc -zv postgres 5432
 
-# Check environment variables
+# Check credentials
 docker-compose exec backend env | grep DB_
+kubectl exec deployment/backend -n url-shortener -- env | grep DB_
 ```
 
-#### 2. Frontend CORS Errors
+Solution:
+- Ensure PostgreSQL is healthy before backend starts
+- Verify environment variables match secret values
+- Check network connectivity between services
 
-```typescript
-// backend/src/app.ts - Verify CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-  credentials: true,
-}));
+**2. Frontend Shows API Errors**
+
+Symptoms: "Failed to fetch" or CORS errors in browser console
+
+```bash
+# Check backend is responding
+curl http://localhost:3000/health
+
+# Verify CORS configuration in backend
+grep -A 5 "cors" backend/src/app.ts
+
+# Check Nginx proxy configuration
+docker-compose exec frontend cat /etc/nginx/conf.d/default.conf
 ```
 
-#### 3. Prometheus Not Scraping Metrics
+Solution:
+- Ensure backend is running and healthy
+- Verify CORS allows frontend origin
+- Check Nginx proxy_pass configuration
+
+**3. Metrics Not Appearing in Prometheus**
+
+Symptoms: No data in Prometheus graphs
 
 ```bash
 # Check Prometheus targets
@@ -1445,84 +1189,113 @@ curl http://localhost:9090/api/v1/targets
 # Verify backend metrics endpoint
 curl http://localhost:3000/api/metrics
 
-# Check Prometheus logs
-docker-compose logs prometheus | grep "error"
+# Check Prometheus configuration
+docker-compose exec prometheus cat /etc/prometheus/prometheus.yml
 ```
 
-#### 4. Kubernetes Pod CrashLoopBackOff
+Solution:
+- Verify scrape configuration matches backend service name
+- Ensure backend is exposing metrics on correct path
+- Check network connectivity between Prometheus and backend
+
+**4. Kubernetes Pods in CrashLoopBackOff**
+
+Symptoms: Pods constantly restarting
 
 ```bash
 # Check pod logs
-kubectl logs <pod-name> -n url-shortener
+kubectl logs <pod-name> -n url-shortener --previous
 
 # Describe pod for events
 kubectl describe pod <pod-name> -n url-shortener
 
-# Check resource limits
+# Check resource usage
 kubectl top pods -n url-shortener
 ```
 
-#### 5. Grafana Dashboard Not Loading
+Solution:
+- Review logs for application errors
+- Verify resource limits are adequate
+- Check health probe configurations
+- Ensure dependencies are available
+
+**5. Port Forwarding Not Working**
+
+Symptoms: Cannot access services locally
 
 ```bash
-# Verify datasource connection
-kubectl port-forward svc/grafana 3002:3000 -n url-shortener
-# Navigate to: http://localhost:3002/datasources
+# Check if port is already in use
+lsof -i :3000
+netstat -an | grep 3000
 
-# Check provisioning
-kubectl exec -it <grafana-pod> -n url-shortener -- ls /etc/grafana/provisioning/datasources/
+# Kill existing port forward
+pkill -f "port-forward"
+
+# Restart port forwarding
+kubectl port-forward svc/backend 3000:3000 -n url-shortener
+```
+
+**6. Database Migrations Not Applied**
+
+Symptoms: Tables missing or schema outdated
+
+```bash
+# Check if tables exist
+docker exec url-shortener-postgres psql -U urlshortener -d urlshortener -c "\dt"
+
+# Manually apply migrations
+docker exec -i url-shortener-postgres psql -U urlshortener -d urlshortener < backend/migrations/init.sql
 ```
 
 ### Debugging Commands
 
+**Docker Compose:**
 ```bash
-# Docker Compose
-docker-compose logs -f <service>
-docker-compose exec <service> sh
-docker-compose restart <service>
-docker-compose down -v  # Clean slate
+# View all container logs
+docker-compose logs -f
 
-# Kubernetes
-kubectl get events -n url-shortener --sort-by='.lastTimestamp'
-kubectl logs <pod> -n url-shortener --previous  # Previous container logs
-kubectl exec -it <pod> -n url-shortener -- sh
-kubectl describe pod <pod> -n url-shortener
-kubectl get pod <pod> -n url-shortener -o yaml
+# View specific service logs
+docker-compose logs -f backend
 
-# Database
-docker exec -it url-shortener-postgres psql -U urlshortener -d urlshortener
-# Then: \dt (list tables), \d urls (describe table)
+# Execute commands in container
+docker-compose exec backend sh
+
+# Restart service
+docker-compose restart backend
+
+# Clean restart
+docker-compose down -v && docker-compose up --build
 ```
 
----
+**Kubernetes:**
+```bash
+# Get all resources
+kubectl get all -n url-shortener
 
-## 📚 Additional Resources
+# View pod events
+kubectl get events -n url-shortener --sort-by='.lastTimestamp'
 
-### Documentation
-- [Docker Documentation](https://docs.docker.com/)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [Prometheus Documentation](https://prometheus.io/docs/)
-- [Grafana Documentation](https://grafana.com/docs/)
+# Previous container logs (for crashed pods)
+kubectl logs <pod-name> -n url-shortener --previous
 
-### Project Links
-- Main README: [README.md](README.md)
-- Backend README: [backend/README.md](backend/README.md)
-- Frontend README: [frontend/README.md](frontend/README.md)
+# Interactive shell
+kubectl exec -it <pod-name> -n url-shortener -- sh
 
-### Team
-- **Youssef Reda Mohamed** - Team Leader
-- **Hager Salah El-Din Youssef** - Monitoring & Grafana
-- **Ahmad Nasser Abdel Latif** - Frontend & Docker
-- **Sarah Ibrahim Abdallah** - CI/CD & Documentation
+# Copy files from pod
+kubectl cp url-shortener/<pod-name>:/path/to/file ./local-file
 
-**DEPI Program 2025**
+# View full pod specification
+kubectl get pod <pod-name> -n url-shortener -o yaml
+```
 
----
+**Database Debugging:**
+```bash
+# Connect to database
+docker exec -it url-shortener-postgres psql -U urlshortener -d urlshortener
 
-## 📝 License
-
-This project is part of the DEPI educational program.
-
----
-
-**Last Updated:** November 2025
+# Useful SQL commands
+\dt              # List tables
+\d urls          # Describe urls table
+SELECT COUNT(*) FROM urls;
+SELECT * FROM urls ORDER BY created_at DESC LIMIT 10;
+```
